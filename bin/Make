@@ -1,0 +1,7 @@
+#!/usr/bin/env perl
+
+use lib './lib';
+use JGoff::App::Make::Runner;
+
+JGoff::App::Make::Runner->new(
+)->run;
