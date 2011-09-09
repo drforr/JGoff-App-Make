@@ -4,7 +4,8 @@ use Getopt::Long;
 use Carp 'croak';
 use Moose;
 
-has target => ( is => 'rw', isa => 'HashRef' );
+has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
+has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 
 =head1 NAME
 
@@ -18,7 +19,6 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 =head1 SYNOPSIS
 
 Quick summary of what the module does.
@@ -27,7 +27,7 @@ Perhaps a little code snippet.
 
     use JGoff::App::Make;
 
-    my $foo = JGoff::App::Make->new();
+    my $foo = JGoff::App::Make->new( target => { ... } );
     ...
 
 =head1 EXPORT
@@ -41,23 +41,120 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
+# {{{ _dependency( target => $target )
+
+sub _dependency {
+  my $self = shift;
+  my %args = @_;
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->_target( target => $args{target} );
+
+  return @{ $self->target->{$args{target}}->{dependency} };
+}
+
+# }}}
+
+# {{{ _target( target => $target )
+
+sub _target {
+  my $self = shift;
+  my %args = @_;
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->target->{$args{target}};
+  
+  return $self->target->{$args{target}};
+}
+
+# }}}
+
+# {{{ _mtime( target => $target )
+
+sub _mtime {
+  my $self = shift;
+  my %args = @_;
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->_target( target => $args{target} );
+  
+  return $self->mtime->{$args{target}};
+}
+
+# }}}
+
+# {{{ _update( target => $target )
+
+sub _update {
+  my $self = shift;
+  my %args = @_;
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->_target( target => $args{target} );
+  my $target = $args{target};
+
+  return $self->target->{$target}->{update}->();
+}
+
+# }}}
+
+# {{{ _satisfy( target => $target )
+
+sub _satisfy {
+  my $self = shift;
+  my %args = @_;
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->_target( target => $args{target} );
+  my $target = $args{target};
+
+  my @unsatisfied;
+  if ( $self->_mtime( target => $target ) ) {
+    for my $dependency ( $self->_dependency( %args ) ) {
+      next if $self->mtime( target => $target ) >
+              $self->mtime( target => $dependency );
+      push @unsatisfied, $dependency;
+    }
+  }
+  else {
+    @unsatisfied = $self->_dependency( %args );
+  }
+
+  for my $dependency ( @unsatisfied ) {
+    if ( my $return = $self->_update( target => $dependency ) ) {
+      warn "*** Error $return\n";
+      return $return;
+    }
+    else {
+      warn "Successfully updated '$dependency'\n";
+    }
+  }
+
+  $self->_update( target => $target );
+  warn "Successfully updated '$target'\n";
+}
+
+# }}}
+
+# {{{ run( target => $target )
+
 sub run {
   my $self = shift;
   my %args = @_;
-  croak "*** Must specify target" unless
-    exists $args{name};
+  croak "*** Must specify argument 'target'" unless
+    exists $args{target};
+  croak "*** No target '$args{target}' found!" unless
+    defined $self->_target( target => $args{target} );
+
+  return $self->_satisfy( %args );
 }
 
-sub add_target {
-  my $self = shift;
-  my %args = @_;
-  croak "*** Must specify 'name' for target" unless
-    exists $args{name};
-  $self->target->{$args{name}}{action} = $args{action} if
-    exists $args{action};
-  $self->target->{$args{name}}{dependency} = $args{dependency} if
-    exists $args{dependency};
-}
+# }}}
 
 =head1 AUTHOR
 
@@ -68,9 +165,6 @@ Jeff Goff, C<< <jgoff at cpan.org> >>
 Please report any bugs or feature requests to C<bug-jgoff-app-make at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=JGoff-App-Make>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
-
-
 
 =head1 SUPPORT
 

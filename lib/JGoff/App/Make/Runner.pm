@@ -26,13 +26,13 @@ has environment => ( is => 'rw', isa => 'HashRef', default => sub { {
   PREFIX => '/usr'
 } } );
 
-sub mkpath {
+sub _mkpath {
   my $self = shift;
 }
-sub chmod {
+sub _chmod {
   my $self = shift;
 }
-sub touch {
+sub _touch {
   my $self = shift;
 }
 
