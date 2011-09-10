@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 8;
+use Test::More tests => 2;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
@@ -122,49 +122,4 @@ $ticks+= rand(2) + 1;
 
   }
 );
-$make->run( target => 'myApp' );
-
-=pod
-
-my $make = JGoff::App::Make->new;
-
-#
-# Failing tests
-#
-eval { $make->run( ) };
-like( $@, qr{ Must \s+ specify \s+ argument \s+ 'target' }x );
-
-eval { $make->run( name => 'foobar' ) };
-like( $@, qr{ Must \s+ specify \s+ argument \s+ 'target' }x );
-
-eval { $make->run( target => 'foobar' ) };
-like( $@, qr{ No \s+ target \s+ 'foobar' \s+ found }x );
-
-$make->add_target(
-  target => 'foobar',
-  dependency => [ 'foo.o', 'bar.o' ],
-  action => sub {
-    # "link" the two libraries
-  }
-);
-
-eval { $make->run( target => 'foobar' ) };
-like( $@, qr{ Missing dependencies 'foo.o', 'bar.o' } );
-
-$make->add_target(
-  target => 'foo.o',
-  dependency => [ 'foo.c' ],
-  action => sub { }
-);
-$make->add_target(
-  target => 'bar.o',
-  dependency => [ 'foo.c' ],
-  action => sub { }
-);
-
-$make->add_target( target => 'foo.c', action => sub { } );
-$make->add_target( target => 'bar.c', action => sub { } );
-
-$make->run( target => 'foobar' );
-
-=cut
+is( $make->run( target => 'myApp' ), undef );

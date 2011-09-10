@@ -130,13 +130,9 @@ sub _satisfy {
       warn "*** Error $return\n";
       return $return;
     }
-    else {
-      warn "Successfully updated '$dependency'\n";
-    }
   }
 
-  $self->_update( target => $target );
-  warn "Successfully updated '$target'\n";
+  return $self->_update( target => $target );
 }
 
 # }}}
