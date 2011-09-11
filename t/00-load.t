@@ -20,6 +20,8 @@ BEGIN {
 #	cc api.c -o api.o
 #
 
+# {{{ %mtime
+
 my %mtime = (
   'core.c' => 1,
   'core.h' => 4,
@@ -32,6 +34,11 @@ my %mtime = (
 #  'api.o' => undef, # XXX In case api.o "already exists"
 #  'myApp' => undef # XXX In case myApp "already exists"
 );
+
+# }}}
+
+# {{{ %can_compile
+
 my %can_compile = (
   'core.c' => 1,
   'core.h' => 1,
@@ -41,6 +48,11 @@ my %can_compile = (
   'gui.h' => 1,
   'myApp' => 1, # Can link thing
 );
+
+# }}}
+
+# {{{ $make
+
 my $ticks = 17;
 my $make = JGoff::App::Make->new(
   mtime => \%mtime,
@@ -53,11 +65,11 @@ my $make = JGoff::App::Make->new(
     'core.o' => {
       dependency => [ 'core.c', 'core.h' ],
       update => sub {
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'core.c'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'core.h'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         $mtime{'core.o'} = $ticks; # XXX Feed back the mtime changes
         return;
       }
@@ -73,11 +85,11 @@ $ticks+= rand(2) + 1;
     'gui.o' => {
       dependency => [ 'gui.c', 'gui.h' ],
       update => sub {
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'gui.c'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'gui.h'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         $mtime{'gui.o'} = $ticks; # XXX Feed back the mtime changes
         return;
       }
@@ -93,11 +105,11 @@ $ticks+= rand(2) + 1;
     'api.o' => {
       dependency => [ 'api.c', 'api.h' ],
       update => sub {
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'api.c'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'api.h'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         $mtime{'api.o'} = $ticks; # XXX Feed back the mtime changes
         return;
       }
@@ -110,9 +122,9 @@ $ticks+= rand(2) + 1;
     'myApp' => {
       dependency => [ 'core.o', 'gui.o', 'api.o' ],
       update => sub {
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'myApp'};
-$ticks+= rand(2) + 1;
+        $ticks+= rand(2) + 1;
         $mtime{'myApp'} = $ticks; # XXX Feed back the mtime changes
         return;
       }
@@ -122,4 +134,7 @@ $ticks+= rand(2) + 1;
 
   }
 );
+
+# }}}
+
 is( $make->run( target => 'myApp' ), undef );
