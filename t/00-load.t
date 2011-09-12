@@ -1,12 +1,54 @@
 #!perl -T
 
-use Test::More tests => 10;
+use Test::More tests => 16;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
 }
 
-# {{{ "working" one-step compile
+# {{{ Nothing to do!
+{
+  #
+  # core.o : core.c core.h
+  #	cc core.c -o core.o
+  #
+  my %mtime = (
+    'core.c' => 1, 
+    'core.h' => 2, 
+    'core.o' => 3, # This should do *nothing* and return undef
+  );
+  my %can_compile = (
+    'core.c' => undef,
+    'core.h' => undef,
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    mtime => \%mtime,
+    target => {
+      'core.c' => { update => sub { undef } },
+      'core.h' => { update => sub { undef } },
+      'core.o' => {
+        dependency => [ 'core.c', 'core.h' ],
+        update => sub {
+          $ticks+= rand(2) + 1;
+          return $can_compile{'core.c'} if $can_compile{'core.c'};
+          $ticks+= rand(2) + 1;
+          return $can_compile{'core.h'} if $can_compile{'core.h'};
+          $ticks+= rand(2) + 1;
+          $mtime{'core.o'} = $ticks; # XXX Feed back the mtime changes
+          return;
+        }
+      },
+    }
+  );
+  is( $make->run( target => 'core.o' ), undef );
+  ok( exists $mtime{'core.o'} );
+  is( $mtime{'core.o'}, 3 );
+}
+# }}}
+
+# {{{ "create" core.o
 {
   #
   # core.o : core.c core.h
@@ -47,16 +89,16 @@ BEGIN {
 }
 # }}}
 
-# {{{ "working" one-step compile, need to update "object file"
+# {{{ bring core.o "up-to-date", older than all source files
 {
   #
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
   my %mtime = (
-    'core.c' => 1, 
-    'core.h' => 2, 
-    'core.o' => 3, # core.h is more "up-to-date"
+    'core.c' => 4, 
+    'core.h' => 6, 
+    'core.o' => 1, # core.h is more "up-to-date", rebuild core.o
   );
   my %can_compile = (
     'core.c' => undef,
@@ -85,7 +127,49 @@ BEGIN {
   );
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $mtime{'core.o'} );
-  ok( $mtime{'core.o'} > 2 );
+  ok( $mtime{'core.o'} > 6 ); # The code has "touched" core.o.
+}
+# }}}
+
+# {{{ bring core.o "up-to-date", older than one source file
+{
+  #
+  # core.o : core.c core.h
+  #	cc core.c -o core.o
+  #
+  my %mtime = (
+    'core.c' => 4, 
+    'core.h' => 6, 
+    'core.o' => 5, # core.h is more "up-to-date", rebuild core.o
+  );
+  my %can_compile = (
+    'core.c' => undef,
+    'core.h' => undef,
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    mtime => \%mtime,
+    target => {
+      'core.c' => { update => sub { undef } },
+      'core.h' => { update => sub { undef } },
+      'core.o' => {
+        dependency => [ 'core.c', 'core.h' ],
+        update => sub {
+          $ticks+= rand(2) + 1;
+          return $can_compile{'core.c'} if $can_compile{'core.c'};
+          $ticks+= rand(2) + 1;
+          return $can_compile{'core.h'} if $can_compile{'core.h'};
+          $ticks+= rand(2) + 1;
+          $mtime{'core.o'} = $ticks; # XXX Feed back the mtime changes
+          return;
+        }
+      },
+    }
+  );
+  is( $make->run( target => 'core.o' ), undef );
+  ok( exists $mtime{'core.o'} );
+  ok( $mtime{'core.o'} > 3 ); # The code has "touched" core.o.
 }
 # }}}
 

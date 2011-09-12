@@ -109,35 +109,42 @@ sub _satisfied {
   $self->_check( @_ );
   my %args = @_;
 
+  return unless $self->_mtime( %args );
+  if ( $self->target->{$args{target}}->{dependency} ) {
+    for my $dependency ( $self->_dependency( %args ) ) {
+      return unless $self->_mtime( target => $args{target} ) >
+                    $self->_mtime( target => $dependency );
+    }
+  }
+  return 1;
 }
 
 # }}}
 
 # {{{ _satisfy( target => $target )
+#
+# To make things "simpler", follow UNIX shell conventions.
+#
+# undef - success
+# Otherwise, error to throw back
+#
 
 sub _satisfy {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
 
-  if ( $self->target->{$args{target}}->{dependency} ) {
-    my @unsatisfied;
-    if ( $self->_mtime( target => $args{target} ) ) {
-      for my $dependency ( $self->_dependency( %args ) ) {
-        next if $self->_mtime( target => $args{target} ) >
-                $self->_mtime( target => $dependency );
-        push @unsatisfied, $dependency;
-      }
-    }
-    else {
-      @unsatisfied = $self->_dependency( %args );
-    }
+  return if $self->_satisfied( %args );
 
-    for my $dependency ( @unsatisfied ) {
-      if ( my $return = $self->_satisfy( target => $dependency ) ) {
-        warn "*** Error $return\n";
-        return $return;
-      }
+  for my $dependency ( $self->_dependency( %args ) ) {
+    my $target_mtime = $self->_mtime( target => $args{target} );
+    my $dependency_mtime = $self->_mtime( target => $dependency );
+
+    next if $target_mtime and $dependency_mtime and
+            $target_mtime > $dependency_mtime;
+    if ( my $return = $self->_satisfy( target => $dependency ) ) {
+      warn "*** Error $return\n";
+      return $return;
     }
   }
 
