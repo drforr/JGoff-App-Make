@@ -41,15 +41,25 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-# {{{ _dependency( target => $target )
+# {{{ _check( target => $target )
 
-sub _dependency {
+sub _check {
   my $self = shift;
   my %args = @_;
   croak "*** Must specify argument 'target'" unless
     exists $args{target};
   croak "*** No target '$args{target}' found!" unless
-    defined $self->_target( target => $args{target} );
+    defined $self->target->{$args{target}};
+}
+
+# }}}
+
+# {{{ _dependency( target => $target )
+
+sub _dependency {
+  my $self = shift;
+  $self->_check( @_ );
+  my %args = @_;
 
   return @{ $self->target->{$args{target}}->{dependency} };
 }
@@ -60,11 +70,8 @@ sub _dependency {
 
 sub _target {
   my $self = shift;
+  $self->_check( @_ );
   my %args = @_;
-  croak "*** Must specify argument 'target'" unless
-    exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->target->{$args{target}};
   
   return $self->target->{$args{target}};
 }
@@ -75,11 +82,8 @@ sub _target {
 
 sub _mtime {
   my $self = shift;
+  $self->_check( @_ );
   my %args = @_;
-  croak "*** Must specify argument 'target'" unless
-    exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->_target( target => $args{target} );
   
   return $self->mtime->{$args{target}};
 }
@@ -90,14 +94,21 @@ sub _mtime {
 
 sub _update {
   my $self = shift;
+  $self->_check( @_ );
   my %args = @_;
-  croak "*** Must specify argument 'target'" unless
-    exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->_target( target => $args{target} );
-  my $target = $args{target};
 
-  return $self->target->{$target}->{update}->();
+  return $self->target->{$args{target}}->{update}->();
+}
+
+# }}}
+
+# {{{ _satisfied( target => $target )
+
+sub _satisfied {
+  my $self = shift;
+  $self->_check( @_ );
+  my %args = @_;
+
 }
 
 # }}}
@@ -106,33 +117,31 @@ sub _update {
 
 sub _satisfy {
   my $self = shift;
+  $self->_check( @_ );
   my %args = @_;
-  croak "*** Must specify argument 'target'" unless
-    exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->_target( target => $args{target} );
-  my $target = $args{target};
 
-  my @unsatisfied;
-  if ( $self->_mtime( target => $target ) ) {
-    for my $dependency ( $self->_dependency( %args ) ) {
-      next if $self->mtime( target => $target ) >
-              $self->mtime( target => $dependency );
-      push @unsatisfied, $dependency;
+  if ( $self->target->{$args{target}}->{dependency} ) {
+    my @unsatisfied;
+    if ( $self->_mtime( target => $args{target} ) ) {
+      for my $dependency ( $self->_dependency( %args ) ) {
+        next if $self->_mtime( target => $args{target} ) >
+                $self->_mtime( target => $dependency );
+        push @unsatisfied, $dependency;
+      }
     }
-  }
-  else {
-    @unsatisfied = $self->_dependency( %args );
-  }
+    else {
+      @unsatisfied = $self->_dependency( %args );
+    }
 
-  for my $dependency ( @unsatisfied ) {
-    if ( my $return = $self->_update( target => $dependency ) ) {
-      warn "*** Error $return\n";
-      return $return;
+    for my $dependency ( @unsatisfied ) {
+      if ( my $return = $self->_satisfy( target => $dependency ) ) {
+        warn "*** Error $return\n";
+        return $return;
+      }
     }
   }
 
-  return $self->_update( target => $target );
+  return $self->_update( target => $args{target} );
 }
 
 # }}}
@@ -142,10 +151,7 @@ sub _satisfy {
 sub run {
   my $self = shift;
   my %args = @_;
-  croak "*** Must specify argument 'target'" unless
-    exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->_target( target => $args{target} );
+  $self->_check( %args );
 
   return $self->_satisfy( %args );
 }
@@ -167,7 +173,6 @@ automatically be notified of progress on your bug as I make changes.
 You can find documentation for this module with the perldoc command.
 
     perldoc JGoff::App::Make
-
 
 You can also look for information at:
 
@@ -191,9 +196,7 @@ L<http://search.cpan.org/dist/JGoff-App-Make/>
 
 =back
 
-
 =head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -204,7 +207,6 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 =cut
 
