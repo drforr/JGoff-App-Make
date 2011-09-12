@@ -1,6 +1,6 @@
 #!perl -T
 
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
@@ -26,8 +26,8 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { update => sub { undef } },
-      'core.h' => { update => sub { undef } },
+      'core.c' => { },
+      'core.h' => { },
       'core.o' => {
         dependency => [ 'core.c', 'core.h' ],
         update => sub {
@@ -67,8 +67,8 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { update => sub { undef } },
-      'core.h' => { update => sub { undef } },
+      'core.c' => { },
+      'core.h' => { },
       'core.o' => {
         dependency => [ 'core.c', 'core.h' ],
         update => sub {
@@ -109,8 +109,8 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { update => sub { undef } },
-      'core.h' => { update => sub { undef } },
+      'core.c' => { },
+      'core.h' => { },
       'core.o' => {
         dependency => [ 'core.c', 'core.h' ],
         update => sub {
@@ -151,8 +151,8 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { update => sub { undef } },
-      'core.h' => { update => sub { undef } },
+      'core.c' => { },
+      'core.h' => { },
       'core.o' => {
         dependency => [ 'core.c', 'core.h' ],
         update => sub {
@@ -192,8 +192,8 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { update => sub { undef } },
-      'core.h' => { update => sub { undef } },
+      'core.c' => { },
+      'core.h' => { },
       'core.o' => {
         dependency => [ 'core.c', 'core.h' ],
         update => sub {
@@ -214,8 +214,7 @@ BEGIN {
 }
 # }}}
 
-=pod
-
+# {{{ Multilevel make
 #
 # myApp : core.o gui.o api.o
 #	ln core.o gui.o api.o -lm -o myApp
@@ -234,8 +233,6 @@ BEGIN {
 #	cc api.c -o api.o
 #
 
-# {{{ %mtime
-
 my %mtime = (
   'core.c' => 1,
   'core.h' => 4,
@@ -250,31 +247,23 @@ my %mtime = (
 #  'myApp' => undef # XXX In case myApp "already exists"
 );
 
-# }}}
-
-# {{{ %can_compile
-
 my %can_compile = (
-  'core.c' => 1,
-  'core.h' => 1,
-  'api.c' => 1,
-  'api.h' => 1,
-  'gui.c' => 1,
-  'gui.h' => 1,
-  'library.o' => 1,
-  'myApp' => 1, # Can link thing
+  'core.c' => undef,
+  'core.h' => undef,
+  'api.c' => undef,
+  'api.h' => undef,
+  'gui.c' => undef,
+  'gui.h' => undef,
+  'library.o' => undef,
+  'myApp' => undef, # Can link thing
 );
-
-# }}}
-
-# {{{ $make
 
 my $ticks = 17;
 my $make = JGoff::App::Make->new(
   mtime => \%mtime,
   target => {
-    'core.c' => { update => sub { undef } },
-    'core.h' => { update => sub { undef } },
+    'core.c' => { },
+    'core.h' => { },
 
 # {{{ core.o
 
@@ -282,9 +271,9 @@ my $make = JGoff::App::Make->new(
       dependency => [ 'core.c', 'core.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'core.c'};
+        return $can_compile{'core.c'} if $can_compile{'core.c'};
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'core.h'};
+        return $can_compile{'core.h'} if $can_compile{'core.h'};
         $ticks+= rand(2) + 1;
         $mtime{'core.o'} = $ticks; # XXX Feed back the mtime changes
         return;
@@ -293,8 +282,8 @@ my $make = JGoff::App::Make->new(
 
 # }}}
 
-    'gui.c' => { update => sub { undef } },
-    'gui.h' => { update => sub { undef } },
+    'gui.c' => { },
+    'gui.h' => { },
 
 # {{{ gui.o
 
@@ -302,9 +291,9 @@ my $make = JGoff::App::Make->new(
       dependency => [ 'gui.c', 'gui.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'gui.c'};
+        return $can_compile{'gui.c'} if $can_compile{'gui.c'};
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'gui.h'};
+        return $can_compile{'gui.h'} if $can_compile{'gui.h'};
         $ticks+= rand(2) + 1;
         $mtime{'gui.o'} = $ticks; # XXX Feed back the mtime changes
         return;
@@ -313,8 +302,8 @@ my $make = JGoff::App::Make->new(
 
 # }}}
 
-    'api.c' => { update => sub { undef } },
-    'api.h' => { update => sub { undef } },
+    'api.c' => { },
+    'api.h' => { },
 
 # {{{ api.o
 
@@ -322,9 +311,9 @@ my $make = JGoff::App::Make->new(
       dependency => [ 'api.c', 'api.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'api.c'};
+        return $can_compile{'api.c'} if $can_compile{'api.c'};
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'api.h'};
+        return $can_compile{'api.h'} if $can_compile{'api.h'};
         $ticks+= rand(2) + 1;
         $mtime{'api.o'} = $ticks; # XXX Feed back the mtime changes
         return;
@@ -339,9 +328,9 @@ my $make = JGoff::App::Make->new(
       dependency => [ 'gui.o', 'api.o' ],
       update => sub {
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'gui.o'};
+        return $can_compile{'gui.o'} if $can_compile{'gui.o'};
         $ticks+= rand(2) + 1;
-        return 1 unless exists $can_compile{'api.o'};
+        return $can_compile{'api.o'} if $can_compile{'api.o'};
         $ticks+= rand(2) + 1;
         $mtime{'library.o'} = $ticks; # XXX Feed back the mtime changes
         return;
@@ -368,8 +357,6 @@ my $make = JGoff::App::Make->new(
   }
 );
 
-# }}}
-
 is( $make->run( target => 'myApp' ), undef );
 
-=cut
+# }}}
