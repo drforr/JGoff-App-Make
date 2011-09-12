@@ -61,62 +61,10 @@ sub _dependency {
   $self->_check( @_ );
   my %args = @_;
 
+  return () unless $self->target->{$args{target}}->{dependency};
+  return () unless @{ $self->target->{$args{target}}->{dependency} };
+
   return @{ $self->target->{$args{target}}->{dependency} };
-}
-
-# }}}
-
-# {{{ _target( target => $target )
-
-sub _target {
-  my $self = shift;
-  $self->_check( @_ );
-  my %args = @_;
-  
-  return $self->target->{$args{target}};
-}
-
-# }}}
-
-# {{{ _mtime( target => $target )
-
-sub _mtime {
-  my $self = shift;
-  $self->_check( @_ );
-  my %args = @_;
-  
-  return $self->mtime->{$args{target}};
-}
-
-# }}}
-
-# {{{ _update( target => $target )
-
-sub _update {
-  my $self = shift;
-  $self->_check( @_ );
-  my %args = @_;
-
-  return $self->target->{$args{target}}->{update}->();
-}
-
-# }}}
-
-# {{{ _satisfied( target => $target )
-
-sub _satisfied {
-  my $self = shift;
-  $self->_check( @_ );
-  my %args = @_;
-
-  return unless $self->_mtime( %args );
-  if ( $self->target->{$args{target}}->{dependency} ) {
-    for my $dependency ( $self->_dependency( %args ) ) {
-      return unless $self->_mtime( target => $args{target} ) >
-                    $self->_mtime( target => $dependency );
-    }
-  }
-  return 1;
 }
 
 # }}}
@@ -134,21 +82,22 @@ sub _satisfy {
   $self->_check( @_ );
   my %args = @_;
 
-  return if $self->_satisfied( %args );
-
+  my $changed;
   for my $dependency ( $self->_dependency( %args ) ) {
-    my $target_mtime = $self->_mtime( target => $args{target} );
-    my $dependency_mtime = $self->_mtime( target => $dependency );
+    my $target_mtime = $self->mtime->{$args{target}};
+    my $dependency_mtime = $self->mtime->{$dependency};
 
     next if $target_mtime and $dependency_mtime and
             $target_mtime > $dependency_mtime;
+
+    $changed = 1;
     if ( my $return = $self->_satisfy( target => $dependency ) ) {
-      warn "*** Error $return\n";
       return $return;
     }
   }
 
-  return $self->_update( target => $args{target} );
+  return unless $changed;
+  return $self->target->{$args{target}}->{update}->();
 }
 
 # }}}
