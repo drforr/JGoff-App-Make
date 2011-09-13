@@ -97,7 +97,7 @@ sub _satisfy {
   }
 
   return unless $changed;
-  return $self->target->{$args{target}}->{update}->();
+  return $self->target->{$args{target}}->{recipe}->();
 }
 
 # }}}
