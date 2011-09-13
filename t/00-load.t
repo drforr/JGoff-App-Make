@@ -26,8 +26,6 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { },
-      'core.h' => { },
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
         recipe => sub {
@@ -67,8 +65,6 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { },
-      'core.h' => { },
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
         recipe => sub {
@@ -109,8 +105,6 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { },
-      'core.h' => { },
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
         recipe => sub {
@@ -151,8 +145,6 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { },
-      'core.h' => { },
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
         recipe => sub {
@@ -192,8 +184,6 @@ BEGIN {
   my $make = JGoff::App::Make->new(
     mtime => \%mtime,
     target => {
-      'core.c' => { },
-      'core.h' => { },
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
         recipe => sub {
@@ -262,8 +252,6 @@ my $ticks = 17;
 my $make = JGoff::App::Make->new(
   mtime => \%mtime,
   target => {
-    'core.c' => { },
-    'core.h' => { },
 
 # {{{ core.o
 
@@ -282,9 +270,6 @@ my $make = JGoff::App::Make->new(
 
 # }}}
 
-    'gui.c' => { },
-    'gui.h' => { },
-
 # {{{ gui.o
 
     'gui.o' => {
@@ -301,9 +286,6 @@ my $make = JGoff::App::Make->new(
     },
 
 # }}}
-
-    'api.c' => { },
-    'api.h' => { },
 
 # {{{ api.o
 
@@ -360,3 +342,36 @@ my $make = JGoff::App::Make->new(
 is( $make->run( target => 'myApp' ), undef );
 
 # }}}
+
+=pod
+
+#
+# The sample makefile from the GNU manual
+# 
+
+edit : main.o kbd.o command.o display.o \
+       insert.o search.o files.o utils.o
+        cc -o edit main.o kbd.o command.o display.o \
+                   insert.o search.o files.o utils.o
+
+main.o : main.c defs.h
+        cc -c main.c
+kbd.o : kbd.c defs.h command.h
+        cc -c kbd.c
+command.o : command.c defs.h command.h
+        cc -c command.c
+display.o : display.c defs.h buffer.h
+        cc -c display.c
+insert.o : insert.c defs.h buffer.h
+        cc -c insert.c
+search.o : search.c defs.h buffer.h
+        cc -c search.c
+files.o : files.c defs.h buffer.h command.h
+        cc -c files.c
+utils.o : utils.c defs.h
+        cc -c utils.c
+clean :
+        rm edit main.o kbd.o command.o display.o \
+           insert.o search.o files.o utils.o
+
+=cut

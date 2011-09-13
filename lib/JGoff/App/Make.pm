@@ -90,8 +90,10 @@ sub _satisfy {
     next if $mtime_target and $mtime_prerequisite and
             $mtime_target > $mtime_prerequisite;
 
-    if ( my $return = $self->_satisfy( target => $prerequisite ) ) {
-      return $return;
+    if ( $self->target->{$prerequisite} ) {
+      if ( my $return = $self->_satisfy( target => $prerequisite ) ) {
+        return $return;
+      }
     }
     $changed = 1;
   }
