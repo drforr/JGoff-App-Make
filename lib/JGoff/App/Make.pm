@@ -9,7 +9,7 @@ has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 
 =head1 NAME
 
-JGoff::App::Make - The great new JGoff::App::Make!
+JGoff::App::Make - Core library for Make utilities.
 
 =head1 VERSION
 
@@ -54,17 +54,17 @@ sub _check {
 
 # }}}
 
-# {{{ _dependency( target => $target )
+# {{{ _prerequisite( target => $target )
 
-sub _dependency {
+sub _prerequisite {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
 
-  return () unless $self->target->{$args{target}}->{dependency};
-  return () unless @{ $self->target->{$args{target}}->{dependency} };
+  return () unless $self->target->{$args{target}}->{prerequisite};
+  return () unless @{ $self->target->{$args{target}}->{prerequisite} };
 
-  return @{ $self->target->{$args{target}}->{dependency} };
+  return @{ $self->target->{$args{target}}->{prerequisite} };
 }
 
 # }}}
@@ -83,17 +83,17 @@ sub _satisfy {
   my %args = @_;
 
   my $changed;
-  for my $dependency ( $self->_dependency( %args ) ) {
-    my $target_mtime = $self->mtime->{$args{target}};
-    my $dependency_mtime = $self->mtime->{$dependency};
+  for my $prerequisite ( $self->_prerequisite( %args ) ) {
+    my $mtime_target = $self->mtime->{$args{target}};
+    my $mtime_prerequisite = $self->mtime->{$prerequisite};
 
-    next if $target_mtime and $dependency_mtime and
-            $target_mtime > $dependency_mtime;
+    next if $mtime_target and $mtime_prerequisite and
+            $mtime_target > $mtime_prerequisite;
 
-    $changed = 1;
-    if ( my $return = $self->_satisfy( target => $dependency ) ) {
+    if ( my $return = $self->_satisfy( target => $prerequisite ) ) {
       return $return;
     }
+    $changed = 1;
   }
 
   return unless $changed;
@@ -106,8 +106,8 @@ sub _satisfy {
 
 sub run {
   my $self = shift;
+  $self->_check( @_ );
   my %args = @_;
-  $self->_check( %args );
 
   return $self->_satisfy( %args );
 }

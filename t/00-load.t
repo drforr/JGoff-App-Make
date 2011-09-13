@@ -29,7 +29,7 @@ BEGIN {
       'core.c' => { },
       'core.h' => { },
       'core.o' => {
-        dependency => [ 'core.c', 'core.h' ],
+        prerequisite => [ 'core.c', 'core.h' ],
         update => sub {
           $ticks+= rand(2) + 1;
           return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -70,7 +70,7 @@ BEGIN {
       'core.c' => { },
       'core.h' => { },
       'core.o' => {
-        dependency => [ 'core.c', 'core.h' ],
+        prerequisite => [ 'core.c', 'core.h' ],
         update => sub {
           $ticks+= rand(2) + 1;
           return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -112,7 +112,7 @@ BEGIN {
       'core.c' => { },
       'core.h' => { },
       'core.o' => {
-        dependency => [ 'core.c', 'core.h' ],
+        prerequisite => [ 'core.c', 'core.h' ],
         update => sub {
           $ticks+= rand(2) + 1;
           return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -154,7 +154,7 @@ BEGIN {
       'core.c' => { },
       'core.h' => { },
       'core.o' => {
-        dependency => [ 'core.c', 'core.h' ],
+        prerequisite => [ 'core.c', 'core.h' ],
         update => sub {
           $ticks+= rand(2) + 1;
           return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -195,7 +195,7 @@ BEGIN {
       'core.c' => { },
       'core.h' => { },
       'core.o' => {
-        dependency => [ 'core.c', 'core.h' ],
+        prerequisite => [ 'core.c', 'core.h' ],
         update => sub {
           $ticks+= rand(2) + 1;
           return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -268,7 +268,7 @@ my $make = JGoff::App::Make->new(
 # {{{ core.o
 
     'core.o' => {
-      dependency => [ 'core.c', 'core.h' ],
+      prerequisite => [ 'core.c', 'core.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
         return $can_compile{'core.c'} if $can_compile{'core.c'};
@@ -288,7 +288,7 @@ my $make = JGoff::App::Make->new(
 # {{{ gui.o
 
     'gui.o' => {
-      dependency => [ 'gui.c', 'gui.h' ],
+      prerequisite => [ 'gui.c', 'gui.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
         return $can_compile{'gui.c'} if $can_compile{'gui.c'};
@@ -308,7 +308,7 @@ my $make = JGoff::App::Make->new(
 # {{{ api.o
 
     'api.o' => {
-      dependency => [ 'api.c', 'api.h' ],
+      prerequisite => [ 'api.c', 'api.h' ],
       update => sub {
         $ticks+= rand(2) + 1;
         return $can_compile{'api.c'} if $can_compile{'api.c'};
@@ -325,7 +325,7 @@ my $make = JGoff::App::Make->new(
 # {{{ library.o
 
     'library.o' => {
-      dependency => [ 'gui.o', 'api.o' ],
+      prerequisite => [ 'gui.o', 'api.o' ],
       update => sub {
         $ticks+= rand(2) + 1;
         return $can_compile{'gui.o'} if $can_compile{'gui.o'};
@@ -342,7 +342,7 @@ my $make = JGoff::App::Make->new(
 # {{{ myApp
 
     'myApp' => {
-      dependency => [ 'core.o', 'library.o' ],
+      prerequisite => [ 'core.o', 'library.o' ],
       update => sub {
         $ticks+= rand(2) + 1;
         return 1 unless exists $can_compile{'myApp'};
