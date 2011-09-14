@@ -4,6 +4,7 @@ use Getopt::Long;
 use Carp 'croak';
 use Moose;
 
+has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
@@ -121,8 +122,18 @@ sub _run {
 
 sub run {
   my $self = shift;
-  $self->_check( @_ );
   my %args = @_;
+  unless ( exists $args{target} ) {
+    if ( $self->default ) {
+      $args{target} = $self->default;
+    }
+    elsif ( keys %{$self->target} == 1 ) {
+      $args{target} = ( keys %{ $self->target } )[0];
+    }
+    else {
+      croak "*** No target or default specified and >1 target present";
+    }
+  }
 
   unless ( keys $self->mtime ) {
     $self->mtime( {

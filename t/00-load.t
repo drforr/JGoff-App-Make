@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 21;
+use Test::More tests => 29;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
@@ -53,6 +53,36 @@ sub make_compile_emulator {
     }
   );
   is( $make->run( target => 'core.o' ), undef );
+  ok( $filesystem{'core.o'}{mtime} );
+  is( $filesystem{'core.o'}{mtime}, 3 );
+}
+# }}}
+
+# {{{ Nothing to do, default action
+{
+  #
+  # core.o : core.c core.h
+  #	cc core.c -o core.o
+  #
+  my %filesystem = (
+    'core.c' => { mtime => 1 },
+    'core.h' => { mtime => 2 },
+    'core.o' => { mtime => 3 }
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    filesystem => \%filesystem,
+    target => {
+      'core.o' => {
+        prerequisite => [ 'core.c', 'core.h' ],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'core.c', 'core.h' ], \$ticks
+        )
+      },
+    }
+  );
+  is( $make->run, undef );
   ok( $filesystem{'core.o'}{mtime} );
   is( $filesystem{'core.o'}{mtime}, 3 );
 }
@@ -250,6 +280,79 @@ $DEBUG--;
 }
 # }}}
 
+# {{{ Multilevel make, run default
+{
+#
+# myApp : core.o gui.o api.o
+#	ln core.o gui.o api.o -lm -o myApp
+#
+# core.o : core.c core.h
+#	cc core.c -o core.o
+#
+# # Add another layer here to properly test recursion
+# library.o : gui.o api.o
+#	ln gui.o api.o -o library.o
+#
+# gui.o : gui.c gui.h
+#	cc gui.c -o gui.o
+#
+# api.o : api.c api.h
+#	cc api.c -o api.o
+#
+
+  my %filesystem = (
+    'core.c' => { mtime => 1 },
+    'core.h' => { mtime => 4 },
+    'gui.c' => { mtime => 7 },
+    'gui.h' => { mtime => 10 },
+    'api.c' => { mtime => 13 },
+    'api.h' => { mtime => 16 } 
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    filesystem => \%filesystem,
+    default => 'myApp',
+    target => {
+      'core.o' => {
+        prerequisite => [ 'core.c', 'core.h' ],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'core.c', 'core.h' ], \$ticks
+        )
+      },
+      'gui.o' => {
+        prerequisite => [ 'gui.c', 'gui.h' ],
+        recipe => make_compile_emulator(
+          \%filesystem, 'gui.o', [ 'gui.c', 'gui.h' ], \$ticks
+        )
+      },
+      'api.o' => {
+        prerequisite => [ 'api.c', 'api.h' ],
+        recipe => make_compile_emulator(
+          \%filesystem, 'api.o', [ 'api.c', 'api.h' ], \$ticks
+        )
+      },
+      'library.o' => {
+        prerequisite => [ 'gui.o', 'api.o' ],
+        recipe => make_compile_emulator(
+          \%filesystem, 'library.o', [ 'gui.o', 'api.o' ], \$ticks
+        )
+      },
+      'myApp' => {
+        prerequisite => [ 'core.o', 'library.o' ],
+        recipe => make_compile_emulator(
+           \%filesystem, 'myApp', [ 'core.o', 'library.o' ], \$ticks
+        )
+      }
+    }
+  );
+
+  is( $make->run, undef );
+  ok( exists $filesystem{'myApp'}{mtime} );
+  ok( $filesystem{'myApp'}{mtime} > 17 );
+}
+# }}}
+
 # {{{ GNU make sample file - make clean
 {
 #
@@ -294,7 +397,6 @@ $DEBUG--;
     target => {
 
 # {{{ edit
-
       edit => {
         prerequisite => [qw(
           main.o kbd.o command.o display.o insert.o search.o files.o utils.o
@@ -310,7 +412,6 @@ $DEBUG--;
 # }}}
 
 # {{{ main.o
-
       'main.o' => {
         prerequisite => [qw( main.c defs.h )],
         recipe => make_compile_emulator(
@@ -321,7 +422,6 @@ $DEBUG--;
 # }}}
 
 # {{{ kbd.o
-
       'kbd.o' => {
         prerequisite => [qw( kbd.c defs.h command.h )],
         recipe => make_compile_emulator(
@@ -332,7 +432,6 @@ $DEBUG--;
 # }}}
 
 # {{{ command.o
-
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
         recipe => make_compile_emulator(
@@ -344,7 +443,6 @@ $DEBUG--;
 # }}}
 
 # {{{ display.o
-
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
         recipe => make_compile_emulator(
@@ -356,7 +454,6 @@ $DEBUG--;
 # }}}
 
 # {{{ insert.o
-
       'insert.o' => {
         prerequisite => [qw( insert.c defs.h buffer.h )],
         recipe => make_compile_emulator(
@@ -368,7 +465,6 @@ $DEBUG--;
 # }}}
 
 # {{{ search.o
-
       'search.o' => {
         prerequisite => [qw( search.c defs.h buffer.h )],
         recipe => make_compile_emulator(
@@ -380,7 +476,6 @@ $DEBUG--;
 # }}}
 
 # {{{ files.o
-
       'files.o' => {
         prerequisite => [qw( files.c defs.h buffer.h command.h )],
         recipe => make_compile_emulator(
@@ -392,7 +487,6 @@ $DEBUG--;
 # }}}
 
 # {{{ utils.o
-
       'utils.o' => {
         prerequisite => [qw( utils.c defs.h )],
         recipe => make_compile_emulator(
@@ -405,17 +499,183 @@ $DEBUG--;
 
 # {{{ clean
 
-      'clean' => {
-        recipe => sub {
-          for my $file ( qw( edit main.o kbd.o command.o display.o 
-                             insert.o search.o files.o utils.o ) ) {
-            $ticks+= rand(2) + 1;
-            delete $filesystem{$file};
-          }
+    'clean' => {
+      recipe => sub {
+        for my $file ( qw( edit main.o kbd.o command.o display.o 
+                           insert.o search.o files.o utils.o ) ) {
           $ticks+= rand(2) + 1;
-          return;
+          delete $filesystem{$file};
         }
+        $ticks+= rand(2) + 1;
+        return;
+      }
+    },
+
+# }}}
+
+    }
+  );
+
+  is( $make->run( target => 'clean' ), undef );
+  ok( !exists $filesystem{'edit'} );
+#  ok( !exists $mtime{'edit'} );
+}
+# }}}
+
+# {{{ GNU make sample file - make clean with @objects reference
+{
+#
+# edit : main.o kbd.o command.o display.o insert.o search.o files.o utils.o
+#         cc -o edit main.o kbd.o command.o display.o \
+#                    insert.o search.o files.o utils.o
+# 
+# main.o : main.c defs.h
+#         cc -c main.c
+# kbd.o : kbd.c defs.h command.h
+#         cc -c kbd.c
+# command.o : command.c defs.h command.h
+#         cc -c command.c
+# display.o : display.c defs.h buffer.h
+#         cc -c display.c
+# insert.o : insert.c defs.h buffer.h
+#         cc -c insert.c
+# search.o : search.c defs.h buffer.h
+#         cc -c search.c
+# files.o : files.c defs.h buffer.h command.h
+#         cc -c files.c
+# utils.o : utils.c defs.h
+#         cc -c utils.c
+# clean :
+#         rm edit main.o kbd.o command.o display.o \
+#            insert.o search.o files.o utils.o
+
+  my %filesystem = (
+    'main.o' => { mtime => 1 },
+    'kbd.o' => { mtime => 3 },
+    'command.o' => { mtime => 12 },
+    'display.o' => { mtime => 13 },
+    'insert.o' => { mtime => 14 },
+    'search.o' => { mtime => 17 },
+    'files.o' => { mtime => 20 },
+    'utils.o' => { mtime => 23 }
+  );
+
+  my @objects = qw(
+    main.o kbd.o command.o display.o insert.o search.o files.o utils.o
+  );
+  my $ticks = 25;
+  my $make = JGoff::App::Make->new(
+    filesystem => \%filesystem,
+    target => {
+
+# {{{ edit
+      edit => {
+        prerequisite => [@objects],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [@objects], \$ticks
+        )
       },
+
+# }}}
+
+# {{{ main.o
+      'main.o' => {
+        prerequisite => [qw( main.c defs.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'main.c', 'defs.h' ], \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ kbd.o
+      'kbd.o' => {
+        prerequisite => [qw( kbd.c defs.h command.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'kbd.c', 'defs.h', 'command.h' ], \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ command.o
+      'command.o' => {
+        prerequisite => [qw( command.c defs.h command.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'command.c', 'defs.h', 'command.h' ],
+          \$ticks
+        )
+    },
+
+# }}}
+
+# {{{ display.o
+      'display.o' => {
+        prerequisite => [qw( display.c defs.h buffer.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'display.c', 'defs.h', 'buffer.h' ],
+          \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ insert.o
+      'insert.o' => {
+        prerequisite => [qw( insert.c defs.h buffer.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'insert.c', 'defs.h', 'buffer.h' ],
+          \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ search.o
+      'search.o' => {
+        prerequisite => [qw( search.c defs.h buffer.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'search.c', 'defs.h', 'buffer.h' ],
+          \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ files.o
+      'files.o' => {
+        prerequisite => [qw( files.c defs.h buffer.h command.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [qw( files.c defs.h buffer.h command.h )],
+          \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ utils.o
+      'utils.o' => {
+        prerequisite => [qw( utils.c defs.h )],
+        recipe => make_compile_emulator(
+          \%filesystem, 'core.o', [ 'utils.c', 'defs.h', ],
+          \$ticks
+        )
+      },
+
+# }}}
+
+# {{{ clean
+
+    'clean' => {
+      recipe => sub {
+        for my $file ( @objects ) {
+          $ticks+= rand(2) + 1;
+          delete $filesystem{$file};
+        }
+        $ticks+= rand(2) + 1;
+        return;
+      }
+    },
 
 # }}}
 
