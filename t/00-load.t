@@ -81,7 +81,7 @@ BEGIN {
   );
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $mtime{'core.o'} );
-  ok( $mtime{'core.o'} > 2 );
+  ok( $mtime{'core.o'} and $mtime{'core.o'} > 2 );
 }
 # }}}
 
@@ -121,7 +121,7 @@ BEGIN {
   );
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $mtime{'core.o'} );
-  ok( $mtime{'core.o'} > 6 ); # The code has "touched" core.o.
+  ok( $mtime{'core.o'} and $mtime{'core.o'} > 6 ); # Touched
 }
 # }}}
 
@@ -161,7 +161,7 @@ BEGIN {
   );
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $mtime{'core.o'} );
-  ok( $mtime{'core.o'} > 3 ); # The code has "touched" core.o.
+  ok( $mtime{'core.o'} and $mtime{'core.o'} > 3 ); # Touched
 }
 # }}}
 

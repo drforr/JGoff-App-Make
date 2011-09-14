@@ -54,55 +54,22 @@ sub _check {
 
 # }}}
 
-# {{{ _prerequisite( target => $target )
+# {{{ _unsatisfied( target => $target )
 
-sub _prerequisite {
+sub _unsatisfied {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
 
-  return () unless $self->target->{$args{target}}->{prerequisite};
-  return () unless @{ $self->target->{$args{target}}->{prerequisite} };
+  return unless $self->target->{$args{target}};
 
-  return @{ $self->target->{$args{target}}->{prerequisite} };
-}
+  my $mtime_target = $self->mtime->{$args{target}};
+  my @prerequisite = @{ $self->target->{$args{target}}->{prerequisite} };
 
-# }}}
+  return @prerequisite unless
+    $mtime_target;
 
-# {{{ _satisfy( target => $target )
-#
-# To make things "simpler", follow UNIX shell conventions.
-#
-# undef - success
-# Otherwise, error to throw back
-#
-
-sub _satisfy {
-  my $self = shift;
-  $self->_check( @_ );
-  my %args = @_;
-
-  my $changed;
-  for my $prerequisite ( $self->_prerequisite( %args ) ) {
-    my $mtime_target = $self->mtime->{$args{target}};
-    my $mtime_prerequisite = $self->mtime->{$prerequisite};
-
-    next if $mtime_target and $mtime_prerequisite and
-            $mtime_target > $mtime_prerequisite;
-
-    if ( $self->target->{$prerequisite} ) {
-      if ( my $return = $self->_satisfy( target => $prerequisite ) ) {
-        return $return;
-      }
-    }
-    $changed = 1;
-  }
-
-  if ( $changed or
-       !$self->_prerequisite( target => $args{target} ) ) {
-    return $self->target->{$args{target}}->{recipe}->();
-  }
-  return;
+  return grep { $self->mtime->{$_} > $mtime_target } @prerequisite;
 }
 
 # }}}
@@ -114,7 +81,18 @@ sub run {
   $self->_check( @_ );
   my %args = @_;
 
-  return $self->_satisfy( %args );
+  my @update = $self->_unsatisfied( %args );
+  for my $prerequisite ( @update ) {
+    if ( $self->target->{$prerequisite} ) {
+      if ( my $rv = $self->run( target => $prerequisite ) ) {
+        return $rv;
+      }
+    }
+  }
+
+  return $self->target->{$args{target}}->{recipe}->() if
+    @update;
+  return;
 }
 
 # }}}
