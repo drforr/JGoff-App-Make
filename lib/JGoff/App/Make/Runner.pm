@@ -36,6 +36,8 @@ sub _touch {
   my $self = shift;
 }
 
+# }}}
+
 =head1 NAME
 
 JGoff::App::Make - The great new JGoff::App::Make!
@@ -70,6 +72,8 @@ if you don't export anything, such as for a purely object-oriented module.
 =head2 run
 
 =cut
+
+# {{{ run( target => $target )
 
 sub run {
   my $self = shift;
@@ -180,10 +184,13 @@ sub run {
 # }}}
 
   } );
+
   for my $target ( $self->target ) { # XXX wrong wrong wrong, but hey.
     $maker->run( target => $target );
   }
 }
+
+# }}}
 
 =head1 AUTHOR
 

@@ -6,6 +6,7 @@ use Moose;
 
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
+has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 
 =head1 NAME
 
@@ -54,6 +55,22 @@ sub _check {
 
 # }}}
 
+# {{{ _phony( target => $target )
+
+sub _phony {
+  my $self = shift;
+  $self->_check( @_ );
+  my %args = @_;
+
+  croak "*** Attempting to check whether a nonexistent target '$args{target}' is phony!" unless
+    defined $self->target->{$args{target}};
+  return 1 unless defined $self->target->{$args{target}}{prerequisite};
+  return 1 unless @{ $self->target->{$args{target}}{prerequisite} };
+  return;
+}
+
+# }}}
+
 # {{{ _unsatisfied( target => $target )
 
 sub _unsatisfied {
@@ -74,17 +91,20 @@ sub _unsatisfied {
 
 # }}}
 
-# {{{ run( target => $target )
+# {{{ _run( target => $target )
 
-sub run {
+sub _run {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
 
+  return $self->target->{$args{target}}->{recipe}->() if
+    $self->_phony( %args );
+
   my @update = $self->_unsatisfied( %args );
   for my $prerequisite ( @update ) {
     if ( $self->target->{$prerequisite} ) {
-      if ( my $rv = $self->run( target => $prerequisite ) ) {
+      if ( my $rv = $self->_run( target => $prerequisite ) ) {
         return $rv;
       }
     }
@@ -93,6 +113,24 @@ sub run {
   return $self->target->{$args{target}}->{recipe}->() if
     @update;
   return;
+}
+
+# }}}
+
+# {{{ run( target => $target )
+
+sub run {
+  my $self = shift;
+  $self->_check( @_ );
+  my %args = @_;
+
+  unless ( keys $self->mtime ) {
+    $self->mtime( {
+      map { $_ => $self->filesystem->{$_}{'mtime'} } keys %{ $self->filesystem }
+    } )
+  }
+
+  return $self->_run( %args );
 }
 
 # }}}
