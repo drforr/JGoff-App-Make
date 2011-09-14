@@ -98,8 +98,9 @@ sub _run {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
+  my $target = $args{target};
 
-  return $self->target->{$args{target}}->{recipe}->() if
+  return $self->target->{$target}->{recipe}->() if
     $self->_phony( %args );
 
   my @update = $self->_unsatisfied( %args );
@@ -111,7 +112,9 @@ sub _run {
     }
   }
 
-  return $self->target->{$args{target}}->{recipe}->() if
+  return $self->target->{$target}->{recipe}->(
+    $target, $self->target->{$target}{prerequisite}
+   ) if
     @update;
   return;
 }
