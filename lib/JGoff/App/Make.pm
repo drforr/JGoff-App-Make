@@ -98,8 +98,11 @@ sub _satisfy {
     $changed = 1;
   }
 
-  return unless $changed;
-  return $self->target->{$args{target}}->{recipe}->();
+  if ( $changed or
+       !$self->_prerequisite( target => $args{target} ) ) {
+    return $self->target->{$args{target}}->{recipe}->();
+  }
+  return;
 }
 
 # }}}
