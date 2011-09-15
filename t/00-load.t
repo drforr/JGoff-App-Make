@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 29;
+use Test::More tests => 32;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
@@ -110,6 +110,85 @@ sub make_compile_emulator {
         recipe => make_compile_emulator(
           \%filesystem, \$ticks
         )
+      },
+    }
+  );
+  is( $make->run( target => 'core.o' ), undef );
+  ok( exists $filesystem{'core.o'} );
+  ok( $filesystem{'core.o'}{mtime} and $filesystem{'core.o'}{mtime} > 2 );
+}
+# }}}
+
+# {{{ "create" core.o with suffix rule
+{
+  #
+  # core.o : core.c core.h
+  #	cc core.c -o core.o
+  #
+  my %filesystem = (
+    'core.c' => { mtime => 1 },
+    'core.h' => { mtime => 2 }
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    filesystem => \%filesystem,
+    #
+    # At the start of the make process:
+    #
+    # In the (hopefully) common case of a target with no recipe specified,
+    # here's what will happen:
+    #
+    # The suffix (file extension) gets stripped off the target name and we look
+    # for the first match in the suffix list.
+    #
+    # When that's found, we look through the filesystem to find the first
+    # filename that fits the completion list. For instance, in the case below
+    # of 'foo.o' we look for a 'foo.c', and if we find that we go to its
+    # recipe. Otherwise keep looking, and if we exhaust the suffix list throw
+    # an exception.
+    #
+    # If a match ('foo.c' in the above case) is found, then add the match to
+    # the user-provided prerequisite list at the front and link the recipe
+    # in the suffix list to the target list and call that like usual.
+    #
+    # For testing purposes these need to close over %filesystem to behave like
+    # they would in real life, but that's a hack, and the real thing will
+    # use the real filesystem.
+    #
+    suffix => [
+      { name => '.o',
+        completion_list => [ '.c' ],
+        #
+        # $target is the full name of the .o file
+        # $prerequisite is completely fleshed-out, in this case it looks through
+        # the 'filesystem' to find 'foo.c' and adds 'foo.c' to the prerequisites
+        #
+        recipe => make_compile_emulator(
+          \%filesystem, \$ticks
+        )
+      },
+      { name => '.o',
+        completion_list => [ '.cc', '.cpp', '.C' ],
+        #
+        # In this case, it may not find 'foo.cc' from 'foo.o' and have to fall
+        # back to 'foo.cpp' etcetera. In any case, it does its best to find
+        # a file matching the given suffix.
+        #
+        recipe => make_compile_emulator(
+          \%filesystem, \$ticks
+        )
+      },
+      { name => '.o',
+        completion_list => [ '.p' ],
+        recipe => make_compile_emulator(
+          \%filesystem, \$ticks
+        )
+      }
+    ],
+    target => {
+      'core.o' => {
+        prerequisite => [ 'core.h' ]
       },
     }
   );

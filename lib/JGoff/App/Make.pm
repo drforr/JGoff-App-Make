@@ -8,6 +8,7 @@ has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
+has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [ ] } );
 
 =head1 NAME
 
@@ -50,8 +51,9 @@ sub _check {
   my %args = @_;
   croak "*** Must specify argument 'target'" unless
     exists $args{target};
-  croak "*** No target '$args{target}' found!" unless
-    defined $self->target->{$args{target}};
+  my $target = $args{target};
+  croak "*** No target '$target' found!" unless
+    defined $self->target->{$target};
 }
 
 # }}}
@@ -62,11 +64,12 @@ sub _phony {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
+  my $target = $args{target};
 
-  croak "*** Attempting to check whether a nonexistent target '$args{target}' is phony!" unless
-    defined $self->target->{$args{target}};
-  return 1 unless defined $self->target->{$args{target}}{prerequisite};
-  return 1 unless @{ $self->target->{$args{target}}{prerequisite} };
+  croak "*** Attempting to check whether a nonexistent target '$target' is phony!"
+    unless defined $self->target->{$target};
+  return 1 unless defined $self->target->{$target}{prerequisite};
+  return 1 unless @{ $self->target->{$target}{prerequisite} };
   return;
 }
 
@@ -78,16 +81,46 @@ sub _unsatisfied {
   my $self = shift;
   $self->_check( @_ );
   my %args = @_;
+  my $target = $args{target};
 
-  return unless $self->target->{$args{target}};
+  return unless $self->target->{$target};
 
-  my $mtime_target = $self->mtime->{$args{target}};
-  my @prerequisite = @{ $self->target->{$args{target}}->{prerequisite} };
+  my $mtime_target = $self->mtime->{$target};
+  my @prerequisite = @{ $self->target->{$target}->{prerequisite} };
 
   return @prerequisite unless
     $mtime_target;
 
   return grep { $self->mtime->{$_} > $mtime_target } @prerequisite;
+}
+
+# }}}
+
+# {{{ _deduce( target => $target )
+
+sub _deduce {
+  my $self = shift;
+  $self->_check( @_ );
+  my %args = @_;
+  my $target = $args{target};
+
+  return if $self->target->{$target}->{recipe};
+  return unless $self->target->{$target}->{prerequisite};
+  return unless @{ $self->target->{$target}->{prerequisite} };
+
+  my ( $name, $extension ) = $target =~ m{ (.+) ([.][^.]+) $ }x;
+  for my $suffix ( @{ $self->suffix } ) {
+    next unless $suffix->{name} eq $extension;
+    for my $completion ( @{ $suffix->{completion_list} } ) {
+      my $file = "${name}${completion}";
+      next unless defined $self->filesystem->{$file};
+      $self->target->{$target}->{prerequisite} = [
+        $file,
+        @{ $self->target->{$target}->{prerequisite} }
+      ];
+      $self->target->{$target}->{recipe} = $suffix->{recipe};
+    }
+  }
 }
 
 # }}}
@@ -99,6 +132,8 @@ sub _run {
   $self->_check( @_ );
   my %args = @_;
   my $target = $args{target};
+
+  $self->_deduce( %args );
 
   return $self->target->{$target}->{recipe}->() if
     $self->_phony( %args );
@@ -114,8 +149,7 @@ sub _run {
 
   return $self->target->{$target}->{recipe}->(
     $target, $self->target->{$target}{prerequisite}
-   ) if
-    @update;
+  ) if @update;
   return;
 }
 
