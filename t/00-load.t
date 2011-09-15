@@ -30,6 +30,33 @@ sub make_compile_emulator {
 
 # }}}
 
+my @suffix = (
+  { name => '.o',
+    completion_list => [qw( .c )] # C
+  },
+  { name => '.o',
+    completion_list => [qw( .cc .cpp .C )] # C++
+  },
+  { name => '.o',
+    completion_list => [qw( .p )] # Pascal
+  },
+  { name => '.o',
+    completion_list => [qw( .r .F .f )] # FORTRAM
+  },
+  { name => '.f',
+    completion_list => [qw( .r .F )] # RATFOR
+  },
+  { name => '.sym',
+    completion_list => [qw( .def )] # Modula-2
+  },
+  { name => '.o',
+    completion_list => [qw( .S )] # assembly
+  },
+  { name => '.S',
+    completion_list => [qw( .s )] # assembly
+  },
+);
+
 # {{{ Nothing to do!
 {
   #
@@ -134,24 +161,8 @@ sub make_compile_emulator {
   my $make = JGoff::App::Make->new(
     filesystem => \%filesystem,
     suffix => [
-      { name => '.o',
-        completion_list => [ '.c' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
-      },
-      { name => '.o',
-        completion_list => [ '.cc', '.cpp', '.C' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
-      },
-      { name => '.o',
-        completion_list => [ '.p' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
-      }
+      map { $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks ); $_ }
+          @suffix
     ],
     default => 'core.o',
     target => {
@@ -184,12 +195,13 @@ sub make_compile_emulator {
   my $ticks = 17;
   my $make = JGoff::App::Make->new(
     filesystem => \%filesystem,
+    suffix => [
+      map { $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks ); $_ }
+          @suffix
+    ],
     target => {
       'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        prerequisite => [ 'core.h' ]
       },
     }
   );
