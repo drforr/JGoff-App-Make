@@ -173,7 +173,9 @@ sub _run {
   }
 
   return $self->target->{$target}->{recipe}->(
-    $target, $self->target->{$target}{prerequisite}
+    $target,
+    $self->target->{$target}{prerequisite},
+    $self->filesystem
   ) if @update;
   return;
 }

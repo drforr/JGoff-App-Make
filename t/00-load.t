@@ -14,10 +14,11 @@ my $DEBUG = 0;
 # {{{ make_compile_emulator
 
 sub make_compile_emulator {
-  my ( $filesystem, $tick_ref ) = @_;
+  my $tick_ref = shift;
   return sub {
     my $target = shift;
     my $prerequisite = shift;
+    my $filesystem = shift;
     for my $file ( @$prerequisite ) {
       $$tick_ref += int(rand(2)) + 1;
       return $filesystem->{$file}{error_code} if
@@ -48,9 +49,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -78,9 +77,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -107,9 +104,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -139,7 +134,7 @@ sub make_compile_emulator {
     }
   );
   for ( @{ $make->suffix } ) {
-    $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks );
+    $_->{recipe} = make_compile_emulator( \$ticks );
   }
   is( $make->run, undef );
   is_deeply(
@@ -170,9 +165,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -204,7 +197,7 @@ sub make_compile_emulator {
     }
   );
   for ( @{ $make->suffix } ) {
-    $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks );
+    $_->{recipe} = make_compile_emulator( \$ticks );
   }
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $filesystem{'core.o'} );
@@ -230,9 +223,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator(
-          \%filesystem, \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -259,7 +250,7 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -304,23 +295,23 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'gui.o' => {
         prerequisite => [ 'gui.c', 'gui.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'api.o' => {
         prerequisite => [ 'api.c', 'api.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'library.o' => {
         prerequisite => [ 'gui.o', 'api.o' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'myApp' => {
         prerequisite => [ 'core.o', 'library.o' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       }
     }
   );
@@ -367,23 +358,23 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'gui.o' => {
         prerequisite => [ 'gui.c', 'gui.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'api.o' => {
         prerequisite => [ 'api.c', 'api.h' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'library.o' => {
         prerequisite => [ 'gui.o', 'api.o' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
       'myApp' => {
         prerequisite => [ 'core.o', 'library.o' ],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       }
     }
   );
@@ -442,12 +433,7 @@ sub make_compile_emulator {
         prerequisite => [qw(
           main.o kbd.o command.o display.o insert.o search.o files.o utils.o
         )],
-        recipe => make_compile_emulator(
-          \%filesystem, [qw(
-            main.o kbd.o command.o display.o insert.o search.o files.o utils.o
-          )],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -455,9 +441,7 @@ sub make_compile_emulator {
 # {{{ main.o
       'main.o' => {
         prerequisite => [qw( main.c defs.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'main.c', 'defs.h' ], \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -465,9 +449,7 @@ sub make_compile_emulator {
 # {{{ kbd.o
       'kbd.o' => {
         prerequisite => [qw( kbd.c defs.h command.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'kbd.c', 'defs.h', 'command.h' ], \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -475,10 +457,7 @@ sub make_compile_emulator {
 # {{{ command.o
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'command.c', 'defs.h', 'command.h' ],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
     },
 
 # }}}
@@ -486,10 +465,7 @@ sub make_compile_emulator {
 # {{{ display.o
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'display.c', 'defs.h', 'buffer.h' ],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -497,10 +473,7 @@ sub make_compile_emulator {
 # {{{ insert.o
       'insert.o' => {
         prerequisite => [qw( insert.c defs.h buffer.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'insert.c', 'defs.h', 'buffer.h' ],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -508,10 +481,7 @@ sub make_compile_emulator {
 # {{{ search.o
       'search.o' => {
         prerequisite => [qw( search.c defs.h buffer.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'search.c', 'defs.h', 'buffer.h' ],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -519,10 +489,7 @@ sub make_compile_emulator {
 # {{{ files.o
       'files.o' => {
         prerequisite => [qw( files.c defs.h buffer.h command.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [qw( files.c defs.h buffer.h command.h )],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -530,10 +497,7 @@ sub make_compile_emulator {
 # {{{ utils.o
       'utils.o' => {
         prerequisite => [qw( utils.c defs.h )],
-        recipe => make_compile_emulator(
-          \%filesystem, [ 'utils.c', 'defs.h', ],
-          \$ticks
-        )
+        recipe => make_compile_emulator( \$ticks )
       },
 
 # }}}
@@ -559,7 +523,6 @@ sub make_compile_emulator {
 
   is( $make->run( target => 'clean' ), undef );
   ok( !exists $filesystem{'edit'} );
-#  ok( !exists $mtime{'edit'} );
 }
 # }}}
 
@@ -611,47 +574,47 @@ sub make_compile_emulator {
 
       edit => {
         prerequisite => [@objects],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'main.o' => {
         prerequisite => [qw( main.c defs.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'kbd.o' => {
         prerequisite => [qw( kbd.c defs.h command.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'insert.o' => {
         prerequisite => [qw( insert.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'search.o' => {
         prerequisite => [qw( search.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'files.o' => {
         prerequisite => [qw( files.c defs.h buffer.h command.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'utils.o' => {
         prerequisite => [qw( utils.c defs.h )],
-        recipe => make_compile_emulator( \%filesystem, \$ticks )
+        recipe => make_compile_emulator( \$ticks )
       },
 
       'clean' => {
