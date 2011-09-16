@@ -8,7 +8,32 @@ has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
-has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [ ] } );
+has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [
+  { name => '.o',
+    completion_list => [qw( .c )] # C
+  },
+  { name => '.o',
+    completion_list => [qw( .cc .cpp .C )] # C++
+  },
+  { name => '.o',
+    completion_list => [qw( .p )] # Pascal
+  },
+  { name => '.o',
+    completion_list => [qw( .r .F .f )] # FORTRAM
+  },
+  { name => '.f',
+    completion_list => [qw( .r .F )] # RATFOR
+  },
+  { name => '.sym',
+    completion_list => [qw( .def )] # Modula-2
+  },
+  { name => '.o',
+    completion_list => [qw( .S )] # assembly
+  },
+  { name => '.S',
+    completion_list => [qw( .s )] # assembly
+  },
+] } );
 
 =head1 NAME
 

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 34;
+use Test::More tests => 37;
 
 BEGIN {
   use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
@@ -29,33 +29,6 @@ sub make_compile_emulator {
 }
 
 # }}}
-
-my @suffix = (
-  { name => '.o',
-    completion_list => [qw( .c )] # C
-  },
-  { name => '.o',
-    completion_list => [qw( .cc .cpp .C )] # C++
-  },
-  { name => '.o',
-    completion_list => [qw( .p )] # Pascal
-  },
-  { name => '.o',
-    completion_list => [qw( .r .F .f )] # FORTRAM
-  },
-  { name => '.f',
-    completion_list => [qw( .r .F )] # RATFOR
-  },
-  { name => '.sym',
-    completion_list => [qw( .def )] # Modula-2
-  },
-  { name => '.o',
-    completion_list => [qw( .S )] # assembly
-  },
-  { name => '.S',
-    completion_list => [qw( .s )] # assembly
-  },
-);
 
 # {{{ Nothing to do!
 {
@@ -160,15 +133,14 @@ my @suffix = (
   my $ticks = 17;
   my $make = JGoff::App::Make->new(
     filesystem => \%filesystem,
-    suffix => [
-      map { $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks ); $_ }
-          @suffix
-    ],
     default => 'core.o',
     target => {
       'core.o' => { prerequisite => [ 'core.h' ] },
     }
   );
+  for ( @{ $make->suffix } ) {
+    $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks );
+  }
   is( $make->run, undef );
   is_deeply(
     $make->target->{'core.o'}->{prerequisite},
@@ -177,6 +149,36 @@ my @suffix = (
   ok( exists $filesystem{'core.o'} );
   ok( $filesystem{'core.o'}{mtime} and $filesystem{'core.o'}{mtime} > 2 );
   ok( $ticks > 17 );
+}
+# }}}
+
+# {{{ bring core.o "up-to-date", no suffix, older than all source files
+{
+  #
+  # core.o : core.c core.h
+  #	cc core.c -o core.o
+  #
+  my %filesystem = (
+    'core.c' => { mtime => 4 },
+    'core.h' => { mtime => 6 },
+    'core.o' => { mtime => 1 } # core.h is more "up-to-date", rebuild core.o
+  );
+
+  my $ticks = 17;
+  my $make = JGoff::App::Make->new(
+    filesystem => \%filesystem,
+    target => {
+      'core.o' => {
+        prerequisite => [ 'core.c', 'core.h' ],
+        recipe => make_compile_emulator(
+          \%filesystem, \$ticks
+        )
+      },
+    }
+  );
+  is( $make->run( target => 'core.o' ), undef );
+  ok( exists $filesystem{'core.o'} );
+  ok( $filesystem{'core.o'}{mtime} and $filesystem{'core.o'}{mtime} > 6 );
 }
 # }}}
 
@@ -195,16 +197,15 @@ my @suffix = (
   my $ticks = 17;
   my $make = JGoff::App::Make->new(
     filesystem => \%filesystem,
-    suffix => [
-      map { $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks ); $_ }
-          @suffix
-    ],
     target => {
       'core.o' => {
         prerequisite => [ 'core.h' ]
       },
     }
   );
+  for ( @{ $make->suffix } ) {
+    $_->{recipe} = make_compile_emulator( \%filesystem, \$ticks );
+  }
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $filesystem{'core.o'} );
   ok( $filesystem{'core.o'}{mtime} and $filesystem{'core.o'}{mtime} > 6 );
@@ -626,7 +627,7 @@ my @suffix = (
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
         recipe => make_compile_emulator( \%filesystem, \$ticks )
-    },
+      },
 
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
