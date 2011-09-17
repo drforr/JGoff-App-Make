@@ -6,7 +6,6 @@ use Moose;
 
 has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
-has mtime => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [
   { name => '.o',
@@ -109,14 +108,17 @@ sub _unsatisfied {
   my $target = $args{target};
 
   return unless $self->target->{$target};
-
-  my $mtime_target = $self->mtime->{$target};
   my @prerequisite = @{ $self->target->{$target}->{prerequisite} };
 
-  return @prerequisite unless
-    $mtime_target;
-
-  return grep { $self->mtime->{$_} > $mtime_target } @prerequisite;
+  if ( $self->filesystem->{$target} and
+       $self->filesystem->{$target}->{mtime} ) {
+    my $mtime_target = $self->filesystem->{$target}->{mtime};
+    return
+      grep { $self->filesystem->{$_}->{mtime} > $mtime_target } @prerequisite;
+  }
+  else {
+    return @prerequisite;
+  }
 }
 
 # }}}
@@ -199,10 +201,10 @@ sub run {
     }
   }
 
-  unless ( keys $self->mtime ) {
-    $self->mtime( {
-      map { $_ => $self->filesystem->{$_}{'mtime'} } keys %{ $self->filesystem }
-    } )
+  my $has_mtime;
+  for(keys %{$self->filesystem} ) {
+    next unless $self->filesystem->{$_}{mtime};
+    $has_mtime = 1;
   }
 
   return $self->_run( %args );
