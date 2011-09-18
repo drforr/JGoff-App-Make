@@ -1,6 +1,6 @@
 package JGoff::App::Make::Compile;
 use Moose;
-extends 'JGoff::App::Make';
+extends 'JGoff::App::Make::Suffix';
 
 # {{{ _mtime( $target )
 

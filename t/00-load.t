@@ -34,8 +34,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 },
@@ -44,7 +44,6 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -60,8 +59,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 },
@@ -70,7 +69,6 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -86,8 +84,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 }
@@ -95,7 +93,6 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -112,8 +109,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 }
@@ -123,9 +120,6 @@ sub make_compile_emulator {
       'core.o' => { prerequisite => [ 'core.h' ] },
     }
   );
-  for ( @{ $make->suffix } ) {
-    $_->{recipe} = make_compile_emulator( \$ticks );
-  }
   is( $make->run, undef );
   is_deeply(
     $make->target->{'core.o'}->{prerequisite},
@@ -134,7 +128,7 @@ sub make_compile_emulator {
   ok( exists $make->filesystem->{'core.o'} );
   ok( $make->filesystem->{'core.o'}{mtime} and
       $make->filesystem->{'core.o'}{mtime} > 2 );
-  ok( $ticks > 17 );
+  ok( $make->ticks > 17 );
 }
 # }}}
 
@@ -144,8 +138,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -154,7 +148,6 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -171,8 +164,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -184,9 +177,6 @@ sub make_compile_emulator {
       },
     }
   );
-  for ( @{ $make->suffix } ) {
-    $_->{recipe} = make_compile_emulator( \$ticks );
-  }
   is( $make->run( target => 'core.o' ), undef );
   ok( exists $make->filesystem->{'core.o'} );
   ok( $make->filesystem->{'core.o'}{mtime} and
@@ -200,8 +190,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -210,7 +200,6 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
@@ -227,8 +216,8 @@ sub make_compile_emulator {
   # core.o : core.c core.h
   #	cc core.c -o core.o
   #
-  my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1, error_code => 1 },
       'core.h' => { mtime => 2 }
@@ -236,13 +225,12 @@ sub make_compile_emulator {
     target => {
       'core.o' => {
         prerequisite => [ 'core.c', 'core.h' ],
-        recipe => make_compile_emulator( \$ticks )
       },
     }
   );
   is( $make->run( target => 'core.o' ), 1 );
   ok( !exists $make->filesystem->{'core.o'} );
-  ok( $ticks > 17 );
+  ok( $make->ticks > 17 );
 }
 # }}}
 
@@ -267,6 +255,7 @@ sub make_compile_emulator {
   #
   my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 4 },
@@ -326,6 +315,7 @@ sub make_compile_emulator {
   #
   my $ticks = 17;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 17,
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 4 },
@@ -392,8 +382,9 @@ sub make_compile_emulator {
   #         rm edit main.o kbd.o command.o display.o \
   #            insert.o search.o files.o utils.o
   #
-  my $ticks = 25;
-  my $make = JGoff::App::Make::FakeFilesystem->new(
+  my $make;
+  $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 25,
     filesystem => {
       'main.o' => { mtime => 1 },
       'kbd.o' => { mtime => 3 },
@@ -410,39 +401,30 @@ sub make_compile_emulator {
         prerequisite => [qw(
           main.o kbd.o command.o display.o insert.o search.o files.o utils.o
         )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'main.o' => {
         prerequisite => [qw( main.c defs.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'kbd.o' => {
         prerequisite => [qw( kbd.c defs.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'insert.o' => {
         prerequisite => [qw( insert.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'search.o' => {
         prerequisite => [qw( search.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'files.o' => {
         prerequisite => [qw( files.c defs.h buffer.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'utils.o' => {
         prerequisite => [qw( utils.c defs.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'clean' => {
         recipe => sub {
@@ -451,10 +433,10 @@ sub make_compile_emulator {
           my $filesystem = shift;
           for my $file ( qw( edit main.o kbd.o command.o display.o 
                              insert.o search.o files.o utils.o ) ) {
-            $ticks+= rand(2) + 1;
+            $make->ticks( $make->ticks + rand(2) + 1 );
             delete $filesystem->{$file};
           }
-          $ticks+= rand(2) + 1;
+          $make->ticks( $make->ticks + rand(2) + 1 );
           return;
         }
       }
@@ -496,8 +478,9 @@ sub make_compile_emulator {
   my @objects = qw(
     main.o kbd.o command.o display.o insert.o search.o files.o utils.o
   );
-  my $ticks = 25;
-  my $make = JGoff::App::Make::FakeFilesystem->new(
+  my $make;
+  $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => 25,
     filesystem => {
       'main.o' => { mtime => 1 },
       'kbd.o' => { mtime => 3 },
@@ -511,48 +494,39 @@ sub make_compile_emulator {
     target => {
       edit => {
         prerequisite => [@objects],
-        recipe => make_compile_emulator( \$ticks )
       },
       'main.o' => {
         prerequisite => [qw( main.c defs.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'kbd.o' => {
         prerequisite => [qw( kbd.c defs.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'command.o' => {
         prerequisite => [qw( command.c defs.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'display.o' => {
         prerequisite => [qw( display.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'insert.o' => {
         prerequisite => [qw( insert.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'search.o' => {
         prerequisite => [qw( search.c defs.h buffer.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'files.o' => {
         prerequisite => [qw( files.c defs.h buffer.h command.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'utils.o' => {
         prerequisite => [qw( utils.c defs.h )],
-        recipe => make_compile_emulator( \$ticks )
       },
       'clean' => {
         recipe => sub {
           my ( $target, $prerequisite, $filesystem ) = @_;
           for my $file ( @$prerequisite ) {
-            $ticks+= rand(2) + 1;
+            $make->ticks( $make->ticks + rand(2) + 1 );
             delete $filesystem->{$file};
           }
-          $ticks+= rand(2) + 1;
+          $make->ticks( $make->ticks + rand(2) + 1 );
           return;
         }
       }
