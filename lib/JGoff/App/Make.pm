@@ -32,6 +32,27 @@ has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [
   { name => '.S',
     completion_list => [qw( .s )] # assembly
   },
+  #
+  # Link n from *.o # XXX
+  #
+  { name => '.c',
+    completion_list => [qw( .y )] # yacc
+  },
+  { name => '.c',
+    completion_list => [qw( .l )] # lex
+  },
+  { name => '.r',
+    completion_list => [qw( .l )] # lex
+  },
+  { name => '.ln',
+    completion_list => [qw( .c )] # lint
+  },
+  { name => '.dvi',
+    completion_list => [qw( .tex )] # TeX
+  },
+  { name => '.tex',
+    completion_list => [qw( .web .w .ch )] # web # XXX not sure about .ch
+  },
 ] } );
 
 =head1 NAME
@@ -171,9 +192,6 @@ sub _run {
 
   $self->_deduce( $target );
 
-  return $self->_run_recipe( $target ) unless
-    $self->_prerequisite( $target );
-
   my @update = $self->_unsatisfied( $target );
   for my $prerequisite ( @update ) {
     next unless $self->target->{$prerequisite};
@@ -181,7 +199,6 @@ sub _run {
       return $rv;
     }
   }
-
   return $self->_run_recipe( $target ) if @update;
   return;
 }
