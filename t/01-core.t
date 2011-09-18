@@ -4,7 +4,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::Dirs;
 use IPC::Run qw( run timeout );
 use Cwd;
@@ -50,10 +50,13 @@ my $make = JGoff::App::Make::Compile->new(
 );
 
 # {{{ basic compile test
+
 {
   in_dir( sub {
     ok( !$make->run );
     ok( -e "hello.o" );
+    ok( !$make->run );
   } );
 }
+
 # }}}
