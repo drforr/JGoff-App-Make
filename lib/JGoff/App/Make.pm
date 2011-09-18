@@ -7,53 +7,6 @@ use Moose;
 has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
-has suffix => ( is => 'rw', isa => 'ArrayRef', default => sub { [
-  { name => '.o',
-    completion_list => [qw( .c )] # C
-  },
-  { name => '.o',
-    completion_list => [qw( .cc .cpp .C )] # C++
-  },
-  { name => '.o',
-    completion_list => [qw( .p )] # Pascal
-  },
-  { name => '.o',
-    completion_list => [qw( .r .F .f )] # FORTRAM
-  },
-  { name => '.f',
-    completion_list => [qw( .r .F )] # RATFOR
-  },
-  { name => '.sym',
-    completion_list => [qw( .def )] # Modula-2
-  },
-  { name => '.o',
-    completion_list => [qw( .S )] # assembly
-  },
-  { name => '.S',
-    completion_list => [qw( .s )] # assembly
-  },
-  #
-  # Link n from *.o # XXX
-  #
-  { name => '.c',
-    completion_list => [qw( .y )] # yacc
-  },
-  { name => '.c',
-    completion_list => [qw( .l )] # lex
-  },
-  { name => '.r',
-    completion_list => [qw( .l )] # lex
-  },
-  { name => '.ln',
-    completion_list => [qw( .c )] # lint
-  },
-  { name => '.dvi',
-    completion_list => [qw( .tex )] # TeX
-  },
-  { name => '.tex',
-    completion_list => [qw( .web .w .ch )] # web # XXX not sure about .ch
-  },
-] } );
 
 =head1 NAME
 
@@ -95,8 +48,7 @@ sub _prerequisite {
   my $self = shift;
   my ( $target ) = @_;
 
-  return unless $self->target->{$target}->{prerequisite} and
-                @{ $self->target->{$target}->{prerequisite} };
+  return unless $self->target->{$target}->{prerequisite};
   return @{ $self->target->{$target}->{prerequisite} };
 }
 
@@ -120,8 +72,7 @@ sub _mtime {
   my $self = shift;
   my ( $target ) = @_;
 
-  return unless $self->filesystem->{$target} and
-                $self->filesystem->{$target}->{mtime};
+  return unless $self->filesystem->{$target};
   return $self->filesystem->{$target}->{mtime};
 }
 
@@ -158,39 +109,11 @@ sub _unsatisfied {
 
 # }}}
 
-# {{{ _deduce( $target )
-
-sub _deduce {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  return if $self->_recipe( $target );
-  return unless $self->_prerequisite( $target );
-
-  my ( $name, $extension ) = $target =~ m{ (.+) ([.][^.]+) $ }x;
-  for my $suffix ( @{ $self->suffix } ) {
-    next unless $suffix->{name} eq $extension;
-    for my $completion ( @{ $suffix->{completion_list} } ) {
-      my $file = "${name}${completion}";
-      next unless defined $self->filesystem->{$file};
-      $self->target->{$target}->{prerequisite} = [
-        $file,
-        $self->_prerequisite( $target )
-      ];
-      $self->target->{$target}->{recipe} = $suffix->{recipe};
-    }
-  }
-}
-
-# }}}
-
 # {{{ _run( $target )
 
 sub _run {
   my $self = shift;
   my ( $target ) = @_;
-
-  $self->_deduce( $target );
 
   my @update = $self->_unsatisfied( $target );
   for my $prerequisite ( @update ) {
@@ -205,25 +128,35 @@ sub _run {
 
 # }}}
 
+# {{{ _default( target => $target )`
+
+sub _default {
+  my $self = shift;
+  my %args = @_;
+
+  unless ( exists $args{target} ) {
+    if ( $self->default ) {
+      return $self->default;
+    }
+    elsif ( keys %{$self->target} == 1 ) {
+      return ( keys %{ $self->target } )[0];
+    }
+    else {
+      croak "*** No target or default specified and >1 target present";
+    }
+  }
+  return $args{target};
+}
+
+# }}}
+
 # {{{ run( target => $target )
 
 sub run {
   my $self = shift;
   my %args = @_;
 
-  unless ( exists $args{target} ) {
-    if ( $self->default ) {
-      $args{target} = $self->default;
-    }
-    elsif ( keys %{$self->target} == 1 ) {
-      $args{target} = ( keys %{ $self->target } )[0];
-    }
-    else {
-      croak "*** No target or default specified and >1 target present";
-    }
-  }
-
-  return $self->_run( $args{target} );
+  return $self->_run( $self->_default( %args ) );
 }
 
 # }}}

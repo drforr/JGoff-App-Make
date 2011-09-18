@@ -6,7 +6,7 @@ use warnings;
 use Test::More tests => 37;
 
 BEGIN {
-  use_ok( 'JGoff::App::Make' ) || print "Bail out!\n";
+  use_ok( 'JGoff::App::Make::Suffix' ) || print "Bail out!\n";
 }
 
 # {{{ make_compile_emulator
@@ -112,7 +112,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::Suffix->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 }
@@ -171,7 +171,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::Suffix->new(
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
