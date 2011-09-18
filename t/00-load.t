@@ -6,7 +6,8 @@ use warnings;
 use Test::More tests => 37;
 
 BEGIN {
-  use_ok( 'JGoff::App::Make::Suffix' ) || print "Bail out!\n";
+  use lib 't/lib';
+  use_ok( 'JGoff::App::Make::FakeFilesystem' ) || print "Bail out!\n";
 }
 
 # {{{ make_compile_emulator
@@ -34,7 +35,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 },
@@ -60,7 +61,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 },
@@ -86,7 +87,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 }
@@ -112,7 +113,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make::Suffix->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 2 }
@@ -144,7 +145,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -171,7 +172,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make::Suffix->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -200,7 +201,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 4 },
       'core.h' => { mtime => 6 },
@@ -227,7 +228,7 @@ sub make_compile_emulator {
   #	cc core.c -o core.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1, error_code => 1 },
       'core.h' => { mtime => 2 }
@@ -265,7 +266,7 @@ sub make_compile_emulator {
   #	cc api.c -o api.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 4 },
@@ -324,7 +325,7 @@ sub make_compile_emulator {
   #	cc api.c -o api.o
   #
   my $ticks = 17;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'core.c' => { mtime => 1 },
       'core.h' => { mtime => 4 },
@@ -392,7 +393,7 @@ sub make_compile_emulator {
   #            insert.o search.o files.o utils.o
   #
   my $ticks = 25;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'main.o' => { mtime => 1 },
       'kbd.o' => { mtime => 3 },
@@ -496,7 +497,7 @@ sub make_compile_emulator {
     main.o kbd.o command.o display.o insert.o search.o files.o utils.o
   );
   my $ticks = 25;
-  my $make = JGoff::App::Make->new(
+  my $make = JGoff::App::Make::FakeFilesystem->new(
     filesystem => {
       'main.o' => { mtime => 1 },
       'kbd.o' => { mtime => 3 },

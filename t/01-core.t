@@ -21,9 +21,9 @@ Readonly my $COMPILE_DIR => 't/compile';
 
 sub in_dir {
   my ( $sub ) = @_;
+  my $current_dir = getcwd;
   my $dir =
     temp_copy_ok( $COMPILE_DIR, 'copy compile_dir for compilation' );
-  my $current_dir = getcwd;
   chdir $dir;
   $sub->();
   chdir $current_dir;
@@ -32,6 +32,10 @@ sub in_dir {
 # }}}
 
 Readonly my $CC => '/usr/bin/cc';
+Readonly my $CPPFLAGS => undef;
+Readonly my $CFLAGS => undef;
+
+# {{{ $make
 
 my $make = JGoff::App::Make::Compile->new(
   target => {
@@ -39,8 +43,9 @@ my $make = JGoff::App::Make::Compile->new(
       prerequisite => [ 'hello.c', 'hello.h' ],
       recipe => sub {
         my ( $target, $prerequisite ) = @_;
-        #'$(CC) $(CPPFLAGS) $(CFLAGS) -c'
-        unless ( run [ $CC, '-c', "hello.c" ] ) {
+
+        my @recipe = grep { defined } ( $CC, $CPPFLAGS, $CFLAGS, '-c' );
+        unless ( run [ @recipe, "hello.c" ] ) {
           return $?;
         }
         return
@@ -48,6 +53,8 @@ my $make = JGoff::App::Make::Compile->new(
     },
   }
 );
+
+# }}}
 
 # {{{ basic compile test
 

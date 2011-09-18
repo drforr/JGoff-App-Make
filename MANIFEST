@@ -11,6 +11,7 @@ t/01-core.t
 t/compile/hello.c
 t/compile/hello.h
 t/lib/JGoff/App/Make/Compile.pm
+t/lib/JGoff/App/Make/FakeFilesystem.pm
 t/manifest.t
 t/pod-coverage.t
 t/pod.t

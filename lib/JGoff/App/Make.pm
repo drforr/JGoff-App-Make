@@ -6,7 +6,6 @@ use Moose;
 
 has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
-has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
 
 =head1 NAME
 
@@ -50,33 +49,6 @@ sub _prerequisite {
 
   return unless $self->target->{$target}->{prerequisite};
   return @{ $self->target->{$target}->{prerequisite} };
-}
-
-# }}}
-
-# {{{ _mtime( $target )
-
-sub _mtime {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  return unless $self->filesystem->{$target};
-  return $self->filesystem->{$target}->{mtime};
-}
-
-# }}}
-
-# {{{ _run_recipe( $target )
-
-sub _run_recipe {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  return $self->target->{$target}->{recipe}->(
-    $target,
-    $self->target->{$target}->{prerequisite},
-    $self->filesystem
-  );
 }
 
 # }}}
