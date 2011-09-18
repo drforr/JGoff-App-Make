@@ -4,7 +4,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Dirs;
 use IPC::Run qw( run timeout );
 use Cwd;
@@ -16,6 +16,21 @@ BEGIN {
 }
 
 Readonly my $COMPILE_DIR => 't/compile';
+
+# {{{ in_dir( sub { ... } )
+
+sub in_dir {
+  my ( $sub ) = @_;
+  my $dir =
+    temp_copy_ok( $COMPILE_DIR, 'copy compile_dir for compilation' );
+  my $current_dir = getcwd;
+  chdir $dir;
+  $sub->();
+  chdir $current_dir;
+}
+
+# }}}
+
 Readonly my $CC => '/usr/bin/cc';
 
 my $make = JGoff::App::Make::Compile->new(
@@ -36,13 +51,9 @@ my $make = JGoff::App::Make::Compile->new(
 
 # {{{ basic compile test
 {
-  my $current_dir = getcwd;
-  my $tmp_dir =
-    temp_copy_ok( $COMPILE_DIR, 'copy compile_dir for compilation' );
-  chdir $tmp_dir;
-  $make->run;
-
-  ok( -e "$tmp_dir/hello.o" );
-  chdir $current_dir;
+  in_dir( sub {
+    ok( !$make->run );
+    ok( -e "hello.o" );
+  } );
 }
 # }}}
