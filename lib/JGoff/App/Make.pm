@@ -54,18 +54,6 @@ sub _prerequisite {
 
 # }}}
 
-# {{{ _recipe( $target )
-
-sub _recipe {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  return unless $self->target->{$target}->{recipe};
-  return $self->target->{$target}->{recipe};
-}
-
-# }}}
-
 # {{{ _mtime( $target )
 
 sub _mtime {
@@ -84,7 +72,7 @@ sub _run_recipe {
   my $self = shift;
   my ( $target ) = @_;
 
-  return $self->_recipe( $target )->(
+  return $self->target->{$target}->{recipe}->(
     $target,
     $self->target->{$target}->{prerequisite},
     $self->filesystem
@@ -134,18 +122,11 @@ sub _default {
   my $self = shift;
   my %args = @_;
 
-  unless ( exists $args{target} ) {
-    if ( $self->default ) {
-      return $self->default;
-    }
-    elsif ( keys %{$self->target} == 1 ) {
-      return ( keys %{ $self->target } )[0];
-    }
-    else {
-      croak "*** No target or default specified and >1 target present";
-    }
-  }
-  return $args{target};
+  return $args{target} if exists $args{target};
+  return $self->default if $self->default;
+  return ( keys %{ $self->target } )[0] if keys %{$self->target} == 1;
+
+  croak "*** No target or default specified and >1 target present";
 }
 
 # }}}

@@ -19,6 +19,7 @@ WriteMakefile(
         'Getopt::Long' => 0,
         'Moose' => 0,
         'Test::More' => 0,
+        'Test::Dirs' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'JGoff-App-Make-*' },

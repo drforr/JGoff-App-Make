@@ -2,7 +2,7 @@ package JGoff::App::Make::Runner;
 
 use Getopt::Long;
 use Moose;
-use JGoff::App::Make;
+use JGoff::App::Make::Suffix;
 
 my $BASEEXT = 'foo';
 my $BOOTSTRAP = 'foo';
@@ -98,20 +98,20 @@ sub run {
 
 #die defined $Config{'usethreads'} ? 'yes' : 'no';
 
-  my $maker = JGoff::App::Make->new;
+  my $maker = JGoff::App::Make::Suffix->new;
   $maker->target( {
-    all => { dependency => [qw( pure_all manifypods )] },
-    pure_all => { dependency => [qw( config pm_to_blib subdirs linkext )] },
-    subdirs => { dependency => [ $MYEXTLIB ] },
-    config => { dependency => [ $FIRST_MAKEFILE, 'blibdirs' ] },
-    help => { action => sub { `perldoc JGoff::App::Make` } },
-    blibdirs => { dependency => [ "INSERT STUFF HERE" ] },
-    'blibdirs.ts' => { dependency => [qw( blibdirs )] },
+    all => { prerequisite => [qw( pure_all manifypods )] },
+    pure_all => { prerequisite => [qw( config pm_to_blib subdirs linkext )] },
+    subdirs => { prerequisite => [ $MYEXTLIB ] },
+    config => { prerequisite => [ $FIRST_MAKEFILE, 'blibdirs' ] },
+    help => { recipe => sub { `perldoc JGoff::App::Make` } },
+    blibdirs => { prerequisite => [ "INSERT STUFF HERE" ] },
+    'blibdirs.ts' => { prerequisite => [qw( blibdirs )] },
 
     # There are a buttload of these.
     "${INST_LIBDIR}${DFSEP}.exists" => {
-      dependency => [ 'Make' ], # This file
-      action => sub {
+      prerequisite => [ 'Make' ], # This file
+      recipe => sub {
         my $self = shift;
         $self->mkdir( $INST_LIBDIR );
         $self->chmod( $PERM_DIR, $INST_LIBDIR );
@@ -119,8 +119,8 @@ sub run {
       }
     },
     "${INST_ARCHLIB}${DFSEP}.exists" => {
-      dependency => [ 'Make' ], # This file
-      action => sub {
+      prerequisite => [ 'Make' ], # This file
+      recipe => sub {
         my $self = shift;
         $self->mkdir( $INST_ARCHLIB );
         $self->chmod( $PERM_DIR, $INST_ARCHLIB );
@@ -130,8 +130,8 @@ sub run {
 
 # {{{ clean => ['clean_subdirs']
     clean => {
-      dependency => [ 'clean_subdirs' ],
-      action => sub {
+      prerequisite => [ 'clean_subdirs' ],
+      recipe => sub {
         my @unlink_files = (
           'blibdirs.ts',
           'core',

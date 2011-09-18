@@ -175,7 +175,7 @@ sub _deduce {
   my $self = shift;
   my ( $target ) = @_;
 
-  return if $self->_recipe( $target );
+  return if $self->target->{$target}->{recipe};
   return unless $self->_prerequisite( $target );
 
   my ( $name, $extension ) = $target =~ m{ (.+) ([.][^.]+) $ }x;
@@ -195,12 +195,16 @@ sub _deduce {
 
 # }}}
 
+# {{{ before _run
+
 before _run => sub {
   my $self = shift;
   my ( $target ) = @_;
 
   $self->_deduce( $target );
 };
+
+# }}}
 
 =head1 AUTHOR
 
