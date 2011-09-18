@@ -2,7 +2,7 @@ package JGoff::App::Make::FakeFilesystem;
 use Moose;
 extends 'JGoff::App::Make::Suffix';
 
-has filesystem => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
+has filesystem => ( is => 'rw', isa => 'HashRef' );
 
 # {{{ _mtime( $target )
 
