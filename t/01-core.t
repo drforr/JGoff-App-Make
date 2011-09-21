@@ -4,7 +4,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 9;
 use Test::Dirs;
 use IPC::Run qw( run timeout );
 use Cwd;
@@ -16,10 +16,11 @@ BEGIN {
 }
 
 Readonly my $COMPILE_DIR => 't/compile';
+Readonly my $TIMEOUT => 10;
 
 # {{{ in_dir( sub { ... } )
 
-sub in_dir {
+sub in_dir(&) {
   my ( $sub ) = @_;
   my $current_dir = getcwd;
   my $dir =
@@ -44,8 +45,11 @@ my $make = JGoff::App::Make::Compile->new(
       recipe => sub {
         my ( $target, $prerequisite ) = @_;
 
-        my @recipe = grep { defined } ( $CC, $CPPFLAGS, $CFLAGS, '-c' );
-        unless ( run [ @recipe, "hello.c" ] ) {
+        my @recipe = grep { defined and $_ ne '' } ( $CC, $CPPFLAGS, $CFLAGS, '-c' );
+        my ( $in, $out, $err );
+        unless ( run [ @recipe, "hello.c" ],
+                     \$in, \$out, \$err,
+                     timeout( $TIMEOUT ) ) {
           return $?;
         }
         return
@@ -58,12 +62,28 @@ my $make = JGoff::App::Make::Compile->new(
 
 # {{{ basic compile test
 
-{
-  in_dir( sub {
-    ok( !$make->run );
-    ok( -e "hello.o" );
-    ok( !$make->run );
-  } );
-}
+in_dir {
+  ok( !$make->run );
+  ok( -e "hello.o" );
+  ok( !$make->run );
+};
+
+# }}}
+
+# {{{ Delete a header file, attempt a compile.
+
+in_dir {
+  unlink getcwd().'/hello.h' or die "Couldn't unlink hello.h: $!\n";
+  is( $make->run, 256 );
+};
+
+# }}}
+
+# {{{ Delete the source file, attempt a compile.
+
+in_dir {
+  unlink getcwd().'/hello.c' or die "Couldn't unlink hello.c: $!\n";
+  is( $make->run, 256 );
+};
 
 # }}}
