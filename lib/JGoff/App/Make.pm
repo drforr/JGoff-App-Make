@@ -5,7 +5,7 @@ use Carp 'croak';
 use Moose;
 
 has default => ( is => 'rw', isa => 'Str' );
-has target => ( is => 'rw', isa => 'HashRef', default => sub { { } } );
+has target => ( is => 'rw', isa => 'HashRef' );
 
 =head1 NAME
 
@@ -41,64 +41,35 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =cut
 
-# {{{ _prerequisite( $target )
-
-sub _prerequisite {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  return unless $self->target->{$target}->{prerequisite};
-  return @{ $self->target->{$target}->{prerequisite} };
-}
-
-# }}}
-
-# {{{ _unsatisfied( $target )
-
-sub _unsatisfied {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  my @prerequisite = $self->_prerequisite( $target );
-
-  if ( my $mtime_target = $self->_mtime( $target ) ) {
-    return grep { $self->_mtime( $_ ) > $mtime_target } @prerequisite;
-  }
-  return @prerequisite;
-}
-
-# }}}
-
-# {{{ _run( $target )
+# {{{ _run( $target_name )
 
 sub _run {
   my $self = shift;
-  my ( $target ) = @_;
+  my ( $target_name ) = @_;
+  my $target = $self->target->{$target_name};
 
-  my @update = $self->_unsatisfied( $target );
+  return $target->{recipe}->($self) if
+    $target->{recipe} and not $target->{prerequisite};
+
+  if ( ! ( $target->{prerequisite} and @{ $target->{prerequisite} } ) and
+       $target->{recipe} ) {
+    return $target->{recipe}->();
+  }
+  my @update = @{ $target->{prerequisite} };
+  if ( my $mtime_target = $self->_mtime( $target_name ) ) {
+    @update = grep { $self->_mtime( $_ ) > $mtime_target } @update;
+  }
+
+  return unless @update;
+
   for my $prerequisite ( @update ) {
     next unless $self->target->{$prerequisite};
     if ( my $rv = $self->_run( $prerequisite ) ) {
       return $rv;
     }
   }
-  return $self->_run_recipe( $target ) if @update;
-  return;
-}
 
-# }}}
-
-# {{{ _default( target => $target )`
-
-sub _default {
-  my $self = shift;
-  my %args = @_;
-
-  return $args{target} if exists $args{target};
-  return $self->default if $self->default;
-  return ( keys %{ $self->target } )[0] if keys %{$self->target} == 1;
-
-  croak "*** No target or default specified and >1 target present";
+  return $target->{recipe}->($self);
 }
 
 # }}}
@@ -109,7 +80,27 @@ sub run {
   my $self = shift;
   my %args = @_;
 
-  return $self->_run( $self->_default( %args ) );
+  unless ( $self->target and keys %{ $self->target } ) {
+    croak "*** No targets to build!";
+  }
+
+  unless ( %args and $args{target} ) {
+    if ( $self->default ) {
+      $args{target} = $self->default;
+    }
+    elsif ( keys %{ $self->target } == 1 ) {
+      $args{target} = ( keys %{ $self->target } ) [0];
+    }
+    else {
+      croak "*** Target unspecified and too many targets to choose from !";
+    }
+  }
+
+  unless ( $self->target->{ $args{target} } ) {
+    croak "*** Cannot make specified target '$args{target}!";
+  }
+
+  return $self->_run( $args{target} );
 }
 
 # }}}

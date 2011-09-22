@@ -2,12 +2,12 @@ Changes
 bin/Make
 lib/JGoff/App/Make.pm
 lib/JGoff/App/Make/Suffix.pm
-lib/JGoff/App/Make/Runner.pm
 Makefile.PL
 MANIFEST			This list of files
 README
 t/00-load.t
-t/01-core.t
+t/01-fake.t
+t/02-compile.t
 t/compile/hello.c
 t/compile/hello.h
 t/lib/JGoff/App/Make/Compile.pm
