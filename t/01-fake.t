@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 27;
 use Test::Dirs;
 
 BEGIN {
@@ -11,64 +11,78 @@ BEGIN {
   use_ok( 'JGoff::App::Make::FakeFilesystem' ) || print "Bail out!\n";
 }
 
+# {{{ Basic build recipe
+
 {
   my $recipe_called;
   my $clean_ran;
   my $hello_error = 1;
-  my $ticks = 9;
-  my $start_ticks = $ticks;
+  my $start_ticks = 9;
   my $make = JGoff::App::Make::FakeFilesystem->new(
+    ticks => $start_ticks,
     default => 'hello.o',
     filesystem => {
-      'hello.c' => { mtime => $ticks - 6 },
-      'hello.h' => { mtime => $ticks - 4 },
-      'hello.o' => { mtime => $ticks - 2 },
+      'hello.c' => { mtime => $start_ticks - 6 },
+      'hello.h' => { mtime => $start_ticks - 4 },
+      'hello.o' => { mtime => $start_ticks - 2 },
     },
     target => {
       'hello.o' => {
         prerequisite => [ 'hello.c', 'hello.h' ],
         recipe => sub {
           my $self = shift;
-          $ticks += int( rand( 3 ) ) + 1;
+          $self->_advance_ticks;
           $recipe_called++;
           if ( $hello_error ) {
             return $hello_error; # Oh noes, 'cc -c hello.o' returned an error!
           }
-          $self->filesystem->{'hello.o'} = { mtime => $ticks };
+          $self->_touch( 'hello.o' );
           return;
         }
       },
-      clean => {
-        recipe => sub {
-          my $self = shift;
-          $clean_ran++;
-          delete $self->filesystem->{'hello.o'};
-          return;
-        }
+      clean => sub {
+        my $self = shift;
+        $self->_advance_ticks;
+        $clean_ran++;
+        delete $self->filesystem->{'hello.o'};
+        return;
       }
     }
   );
 
   #
-  # Run 'make hello.o', shouldn't do anything.
+  # All files up-to-date
+  #
+  # make hello.o # Should "exit" successfully, do nothing.
   #
   ok( ! $make->run, 'Nothing to do!' );
   ok( ! $recipe_called, 'Recipe for hello.o was not used' );
   ok( ! $clean_ran, 'Recipe for clean was not used' );
-  ok( $make->filesystem->{'hello.o'}, 'Library for hello.o not touched' );
+  is( $make->_mtime( 'hello.o' ),
+      $start_ticks - 2, 'Library for hello.o not touched' );
+  ok( $make->ticks == $start_ticks, 'Ticks remain stable' );
+  $recipe_called = undef;
+  $clean_ran = undef;
 
   #
-  # Run 'make clean', should delete 'hello.o'
+  # All files up-to-date
+  #
+  # make clean # Should "exit" successfully, "delete" hello.o
   #
   ok( ! $make->run( target => 'clean' ), 'Make clean ran successfully' );
   ok( ! $recipe_called, 'Recipe for hello.o was not used' );
   is( $clean_ran, 1, 'Recipe for clean was used' );
   ok( ! $make->filesystem->{'hello.o'}, 'Library for hello.o deleted' );
+  ok( $make->ticks > $start_ticks, 'Ticks advanced' );
   $recipe_called = undef;
   $clean_ran = undef;
 
   #
-  # Run a failed 'make hello.o', should error out without touching filesystem
+  # hello.c up-to-date
+  # hello.h up-to-date
+  # hello.o does not exist
+  #
+  # make hello.o # Should "exit" with an error, hello.c has an "error" in it
   #
   is( $make->run, 1, 'Make failed correctly' );
   is( $recipe_called, 1, 'Recipe for hello.o was run, failed' );
@@ -76,166 +90,58 @@ BEGIN {
   ok( ! $make->filesystem->{'hello.o'}, 'Library for hello.o still not there' );
   $recipe_called = undef;
   $clean_ran = undef;
+  $hello_error = undef;
 
   #
-  # Clear up the "error" on compilation, rerun 'make hello.o'
+  # hello.c up-to-date, has been "edited" to remove the "error"
+  # hello.h up-to-date
+  # hello.o does not exist
   #
-  $hello_error = undef; # "clear up" the error
-
+  # make hello.o # Should "exit" cleanly, build hello.o
+  #
   ok( ! $make->run, 'Make ran successfully' );
   is( $recipe_called, 1, 'Recipe for hello.o was run successfully' );
   ok( ! $clean_ran, 'Recipe for clean was not used' );
   ok( $make->filesystem->{'hello.o'}, 'Library for hello.o was created' );
+  $recipe_called = undef;
+  $clean_ran = undef;
+
+  #
+  # hello.c up-to-date
+  # hello.h "touched", "edited" to cause an "error"
+  # hello.o up-to-date
+  #
+  # make hello.o # Should "exit" with an error, not update hello.o
+  #
+  $make->_touch( 'hello.h' );
+  $hello_error = 1; # "break" hello.h
+  is( $make->run, 1, 'Make failed correctly after hello.h "broken"' );
+  is( $recipe_called, 1, 'Recipe for hello.o was run' );
+  ok( ! $clean_ran, 'Recipe for clean was not used' );
+  ok( $make->_mtime( 'hello.h' ) > $make->_mtime( 'hello.o' ),
+      'hello.o was correctly not updated' );
+  $recipe_called = undef;
+  $clean_ran = undef;
+
+  #
+  # hello.c still up-to-date
+  # hello.h "touched", "edited" to fix the "error"
+  # hello.o still up-to-date, will be updated after the build
+  #
+  # make hello.o #  Should "exit" cleanly, update hello.o
+  #
+  $make->_touch( 'hello.h' );
+  $hello_error = undef; # "clear up" the error
+  ok( ! $make->run, 'Make ran successfully' );
+  is( $recipe_called, 1, 'Recipe for hello.o was run successfully' );
+  ok( ! $clean_ran, 'Recipe for clean was not used' );
+  ok( $make->_mtime( 'hello.o' ) > $make->_mtime( 'hello.h' ),
+      'hello.o was correctly updated' );
 }
+
+# }}}
 
 =pod
-
-# {{{ $make
-
-my $make = JGoff::App::Make::Compile->new(
-  target => {
-    'hello.o' => {
-      prerequisite => [ 'hello.c', 'hello.h' ],
-      recipe => sub {
-        my ( $target, $prerequisite ) = @_;
-
-        my @recipe =
-          grep { defined and $_ ne '' }
-          ( $CC, $CPPFLAGS, $CFLAGS, '-c' );
-        my ( $in, $out, $err );
-        unless ( run [ @recipe, "hello.c" ],
-                     \$in, \$out, \$err,
-                     timeout( $TIMEOUT ) ) {
-          return $?;
-        }
-        return
-      }
-    },
-  }
-);
-
-# }}}
-
-# {{{ basic compile test
-
-in_dir {
-  ok( !$make->run );
-  ok( -e "hello.o" );
-  ok( !$make->run );
-};
-
-# }}}
-
-# {{{ Delete a header file, attempt a compile.
-
-in_dir {
-  unlink getcwd().'/hello.h' or die "Couldn't unlink hello.h: $!\n";
-  is( $make->run, 256 );
-};
-
-# }}}
-
-# {{{ Delete the source file, attempt a compile.
-
-in_dir {
-  unlink getcwd().'/hello.c' or die "Couldn't unlink hello.c: $!\n";
-  is( $make->run, 256 );
-};
-
-# }}}
-
-# {{{ make_compile_emulator
-
-sub make_compile_emulator {
-  my $tick_ref = shift;
-  return sub {
-    my ( $target, $prerequisite, $filesystem ) = @_;
-    for my $file ( @$prerequisite ) {
-      $$tick_ref += int(rand(2)) + 1;
-      return $filesystem->{$file}{error_code} if
-             $filesystem->{$file}{error_code};
-    }
-    $filesystem->{$target}{mtime} = $$tick_ref;
-    return;
-  }
-}
-
-# }}}
-
-# {{{ Nothing to do!
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 1 },
-      'core.h' => { mtime => 2 },
-      'core.o' => { mtime => 3 }
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), undef );
-  ok( $make->filesystem->{'core.o'}{mtime} );
-  is( $make->filesystem->{'core.o'}{mtime}, 3 );
-}
-# }}}
-
-# {{{ Nothing to do, default action
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 1 },
-      'core.h' => { mtime => 2 },
-      'core.o' => { mtime => 3 }
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run, undef );
-  ok( $make->filesystem->{'core.o'}{mtime} );
-  is( $make->filesystem->{'core.o'}{mtime}, 3 );
-}
-# }}}
-
-# {{{ "create" core.o
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 1 },
-      'core.h' => { mtime => 2 }
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), undef );
-  ok( exists $make->filesystem->{'core.o'} );
-  ok( $make->filesystem->{'core.o'}{mtime} and
-      $make->filesystem->{'core.o'}{mtime} > 2 );
-}
-# }}}
 
 # {{{ "create" core.o with default suffix handling rule
 {
@@ -262,108 +168,6 @@ sub make_compile_emulator {
   ok( exists $make->filesystem->{'core.o'} );
   ok( $make->filesystem->{'core.o'}{mtime} and
       $make->filesystem->{'core.o'}{mtime} > 2 );
-  ok( $make->ticks > 17 );
-}
-# }}}
-
-# {{{ bring core.o "up-to-date", no suffix, older than all source files
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 4 },
-      'core.h' => { mtime => 6 },
-      'core.o' => { mtime => 1 } # core.h is more "up-to-date", rebuild core.o
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), undef );
-  ok( exists $make->filesystem->{'core.o'} );
-  ok( $make->filesystem->{'core.o'}{mtime} and
-      $make->filesystem->{'core.o'}{mtime} > 6 );
-}
-# }}}
-
-# {{{ bring core.o "up-to-date", older than all source files
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 4 },
-      'core.h' => { mtime => 6 },
-      'core.o' => { mtime => 1 } # core.h is more "up-to-date", rebuild core.o
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.h' ]
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), undef );
-  ok( exists $make->filesystem->{'core.o'} );
-  ok( $make->filesystem->{'core.o'}{mtime} and
-      $make->filesystem->{'core.o'}{mtime} > 6 );
-}
-# }}}
-
-# {{{ bring core.o "up-to-date", older than one source file
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 4 },
-      'core.h' => { mtime => 6 },
-      'core.o' => { mtime => 5 } # core.h is more "up-to-date", rebuild core.o
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), undef );
-  ok( exists $make->filesystem->{'core.o'} );
-  ok( $make->filesystem->{'core.o'}{mtime} and
-      $make->filesystem->{'core.o'}{mtime} > 6 );
-}
-# }}}
-
-# {{{ "broken" one-step compile
-{
-  #
-  # core.o : core.c core.h
-  #	cc core.c -o core.o
-  #
-  my $make = JGoff::App::Make::FakeFilesystem->new(
-    ticks => 17,
-    filesystem => {
-      'core.c' => { mtime => 1, error_code => 1 },
-      'core.h' => { mtime => 2 }
-    },
-    target => {
-      'core.o' => {
-        prerequisite => [ 'core.c', 'core.h' ],
-      },
-    }
-  );
-  is( $make->run( target => 'core.o' ), 1 );
-  ok( !exists $make->filesystem->{'core.o'} );
   ok( $make->ticks > 17 );
 }
 # }}}

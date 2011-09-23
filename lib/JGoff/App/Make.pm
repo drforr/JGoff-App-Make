@@ -1,6 +1,5 @@
 package JGoff::App::Make;
 
-use Getopt::Long;
 use Carp 'croak';
 use Moose;
 
@@ -48,13 +47,9 @@ sub _run {
   my ( $target_name ) = @_;
   my $target = $self->target->{$target_name};
 
-  return $target->{recipe}->($self) if
-    $target->{recipe} and not $target->{prerequisite};
+  return $target->($self) if
+    ref( $target ) eq 'CODE';
 
-  if ( ! ( $target->{prerequisite} and @{ $target->{prerequisite} } ) and
-       $target->{recipe} ) {
-    return $target->{recipe}->();
-  }
   my @update = @{ $target->{prerequisite} };
   if ( my $mtime_target = $self->_mtime( $target_name ) ) {
     @update = grep { $self->_mtime( $_ ) > $mtime_target } @update;

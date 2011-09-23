@@ -2,6 +2,7 @@ package JGoff::App::Make::FakeFilesystem;
 use Moose;
 extends 'JGoff::App::Make';
 
+has ticks => ( is => 'rw', isa => 'Int' );
 has filesystem => ( is => 'rw', isa => 'HashRef' );
 
 sub _mtime {
@@ -12,51 +13,18 @@ sub _mtime {
   return $self->filesystem->{$file}->{mtime};
 }
 
-=pod
-
-has ticks => ( is => 'rw', isa => 'Int' );
-has filesystem => ( is => 'rw', isa => 'HashRef' );
-
-# {{{ advance_time
-
-sub advance_time {
+sub _advance_ticks {
   my $self = shift;
-  my ( $amount ) = @_;
-  $amount ||= 3;
-  $self->ticks( $self->ticks + $amount );
+  my ( $ticks ) = @_;
+  $ticks ||= int( rand( 3 ) ) + 1;
+  $self->ticks( $self->ticks + $ticks );
 }
 
-# }}}
-
-# {{{ _mtime( $target )
-
-sub _mtime {
+sub _touch {
   my $self = shift;
-  my ( $target ) = @_;
-
-  return unless $self->filesystem->{$target};
-  return $self->filesystem->{$target}->{mtime};
+  my ( $file ) = @_;
+  $self->_advance_ticks;
+  $self->filesystem->{$file} = { mtime => $self->ticks };
 }
-
-# }}}
-
-# {{{ _run_recipe( $target )
-
-sub _run_recipe {
-  my $self = shift;
-  my ( $target ) = @_;
-
-  for my $file ( @{ $self->target->{$target}->{prerequisite} } ) {
-    $self->advance_time;
-    return $self->filesystem->{$file}{error_code} if
-           $self->filesystem->{$file}{error_code};
-  }
-  $self->filesystem->{$target}{mtime} = $self->ticks;
-  return;
-}
-
-# }}}
-
-=cut
 
 1;

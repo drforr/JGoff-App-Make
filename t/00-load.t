@@ -63,10 +63,6 @@ BEGIN {
   };
   like( $@, qr{ Cannot \s+ make \s+ specified \s+ target }x );
 
-  eval {
-    JGoff::App::Make->new(
-      target => { warble => 1, fubar => 1 },
-    )->run
-  };
+  eval { JGoff::App::Make->new( target => { warble => 1, fubar => 1 },)->run };
   like( $@, qr{ Target \s+ unspecified \s+ and \s+ too \s+ many }x );
 }
