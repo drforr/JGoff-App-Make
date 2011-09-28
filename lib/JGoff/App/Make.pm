@@ -3,7 +3,6 @@ package JGoff::App::Make;
 use Carp 'croak';
 use Moose;
 
-has default => ( is => 'rw', isa => 'Str' );
 has target => ( is => 'rw', isa => 'HashRef' );
 
 =head1 NAME
@@ -26,19 +25,43 @@ Perhaps a little code snippet.
 
     use JGoff::App::Make;
 
-    my $foo = JGoff::App::Make->new( target => { ... } );
+    my $maker = JGoff::App::Make->new(
+      target => {
+        'helloWorld' => {
+          prerequisite => [ 'helloWorld.c', 'helloWorld.h' ]
+        }
+      }
+    );
+    $maker->run( target => 'helloWorld' );
     ...
 
-=head1 EXPORT
+=head1 METHODS
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+=head2 new( target => { ... } )
 
-=head1 SUBROUTINES/METHODS
-
-=head2 run
+The main 'new'
 
 =cut
+
+=head2 run( [target => 'foo'] )
+
+=cut
+
+# {{{ _targets_to_update( $target_name )
+
+sub _targets_to_update {
+  my $self = shift;
+  my ( $target_name ) = @_;
+  my $target = $self->target->{$target_name};
+
+  my @update = @{ $target->{prerequisite} };
+  if ( my $mtime_target = $self->_mtime( $target_name ) ) {
+    return grep { $self->_mtime( $_ ) > $mtime_target } @update;
+  }
+  return @update;
+}
+
+# }}}`
 
 # {{{ _run( $target_name )
 
@@ -50,10 +73,7 @@ sub _run {
   return $target->($self) if
     ref( $target ) eq 'CODE';
 
-  my @update = @{ $target->{prerequisite} };
-  if ( my $mtime_target = $self->_mtime( $target_name ) ) {
-    @update = grep { $self->_mtime( $_ ) > $mtime_target } @update;
-  }
+  my @update = $self->_targets_to_update( $target_name );
 
   return unless @update;
 
@@ -63,7 +83,6 @@ sub _run {
       return $rv;
     }
   }
-
   return $target->{recipe}->($self);
 }
 
@@ -75,25 +94,13 @@ sub run {
   my $self = shift;
   my %args = @_;
 
-  unless ( $self->target and keys %{ $self->target } ) {
-    croak "*** No targets to build!";
-  }
+  croak "*** No target specified!\n" unless $args{target};
 
-  unless ( %args and $args{target} ) {
-    if ( $self->default ) {
-      $args{target} = $self->default;
-    }
-    elsif ( keys %{ $self->target } == 1 ) {
-      $args{target} = ( keys %{ $self->target } ) [0];
-    }
-    else {
-      croak "*** Target unspecified and too many targets to choose from !";
-    }
-  }
+  croak "*** No targets to build!" unless
+    $self->target and keys %{ $self->target };
 
-  unless ( $self->target->{ $args{target} } ) {
-    croak "*** Cannot make specified target '$args{target}!";
-  }
+  croak "*** Cannot make specified target '$args{target}!" unless
+    $self->target->{ $args{target} };
 
   return $self->_run( $args{target} );
 }
@@ -106,9 +113,7 @@ Jeff Goff, C<< <jgoff at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-jgoff-app-make at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=JGoff-App-Make>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to C<bug-jgoff-app-make at rt.cpan.org>, or through the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=JGoff-App-Make>. I will be notified, and then you'll automatically be notified of progress on your bug as I make changes.
 
 =head1 SUPPORT
 

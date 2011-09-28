@@ -2,7 +2,7 @@ package JGoff::App::Make::FakeFilesystem;
 use Moose;
 extends 'JGoff::App::Make';
 
-has ticks => ( is => 'rw', isa => 'Int' );
+has ticks => ( is => 'rw', isa => 'Int', default => time );
 has filesystem => ( is => 'rw', isa => 'HashRef' );
 
 sub _mtime {
