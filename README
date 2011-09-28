@@ -1,16 +1,14 @@
 JGoff-App-Make
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+A pure-perl make alternative, the idea for the moment being that it does just
+enough to manage installs of pure perl modules. For the moment it should be
+just enough to manage the basics of 'make', 'make test' and 'make install'.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+The tests will rely on a working C compiler until I can come up with a better
+way to test the interactions using external utilities, so this isn't great to
+install on production boxes with no compilers.
 
+Currently it's not self-hosting, that will eventually change.
 
 INSTALLATION
 
